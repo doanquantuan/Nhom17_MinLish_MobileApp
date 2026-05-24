@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "67533858089",
+    "project_id": "minlish-4ed69",
+    "storage_bucket": "minlish-4ed69.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:67533858089:android:212c78346672b6d0d14338",
+        "android_client_info": {
+          "package_name": "com.example.minlish"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCBUw8JDTiBO_IIORcacaG7Rx5KwN_mPk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
