@@ -1,13 +1,12 @@
 package com.example.minlish.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.minlish.ui.screens.vocabulary.AddVocabularyScreen
-import com.example.minlish.ui.screens.vocabulary.CreateSetScreen
-import com.example.minlish.ui.screens.vocabulary.VocabularyListScreen
-import com.example.minlish.ui.screens.vocabulary.VocabularySetScreen
+import androidx.navigation.navArgument
+import com.example.minlish.ui.screens.vocabulary.*
 
 @Composable
 fun AppNavigation() {
@@ -34,13 +33,13 @@ fun AppNavigation() {
         }
 
         composable(
-            route = Routes.VocabularyList.route
+            route = Routes.VocabularyList.route,
+            arguments = listOf(
+                navArgument("setId") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
 
-            val setId =
-                backStackEntry.arguments
-                    ?.getString("setId")
-                    ?: ""
+            val setId = backStackEntry.arguments?.getString("setId") ?: ""
 
             VocabularyListScreen(
                 navController = navController,
@@ -49,17 +48,37 @@ fun AppNavigation() {
         }
 
         composable(
-            route = Routes.AddVocabulary.route
+            route = Routes.AddVocabulary.route,
+            arguments = listOf(
+                navArgument("setId") { type = NavType.StringType },
+                navArgument("vocabularyId") { 
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
         ) { backStackEntry ->
-
-            val setId =
-                backStackEntry.arguments
-                    ?.getString("setId")
-                    ?: ""
+            val setId = backStackEntry.arguments?.getString("setId") ?: ""
+            val vocabularyId = backStackEntry.arguments?.getString("vocabularyId")
 
             AddVocabularyScreen(
                 navController = navController,
-                setId = setId
+                setId = setId,
+                vocabularyId = vocabularyId
+            )
+        }
+
+        composable(
+            route = Routes.VocabularyDetail.route,
+            arguments = listOf(
+                navArgument("vocabularyId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val vocabularyId = backStackEntry.arguments?.getString("vocabularyId") ?: ""
+
+            VocabularyDetailScreen(
+                navController = navController,
+                vocabularyId = vocabularyId
             )
         }
     }

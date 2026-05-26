@@ -5,11 +5,10 @@ data class Vocabulary(
     val setId: String = "",
 
     val word: String = "",
+    val wordType: String = "",
     val pronunciation: String = "",
     val meaning: String = "",
 
-    val imageUrl: String = "",
-    val audioUrl: String = "",
 
     val description: String = "",
     val example: String = "",
