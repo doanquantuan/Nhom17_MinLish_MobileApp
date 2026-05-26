@@ -19,23 +19,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.minlish.R
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
+import com.example.minlish.viewmodel.AuthViewModel
 
 @Composable
-fun OnboardingScreen(navController: NavController) {
+fun OnboardingScreen(navController: NavController, authViewModel: AuthViewModel = viewModel()) {
     var currentStep by remember { mutableIntStateOf(1) }
     val primaryPurple = Color(0xFF534AB7)
-    val context = LocalContext.current // Khai báo context để hiển thị Toast thông báo
+    val context = LocalContext.current
 
-    // Lưu thông tin lựa chọn của user
     var selectedGoal by remember { mutableStateOf("") }
     var selectedLevel by remember { mutableStateOf("") }
     var selectedWordsPerDay by remember { mutableIntStateOf(0) }
-    var isLoading by remember { mutableStateOf(false) }
+
+    LaunchedEffect(authViewModel.toastMessage) {
+        authViewModel.toastMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            authViewModel.toastMessage = null
+        }
+    }
+
+    LaunchedEffect(authViewModel.navigateToDashboard) {
+        if (authViewModel.navigateToDashboard) {
+            authViewModel.navigateToDashboard = false
+            navController.navigate("dashboard") { popUpTo("onboarding") { inclusive = true } }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -46,14 +57,7 @@ fun OnboardingScreen(navController: NavController) {
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Thanh tiến trình
-        Text(
-            text = "BƯỚC $currentStep / 3",
-            color = primaryPurple,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = BeVietnamPro
-        )
+        Text(text = "BƯỚC $currentStep / 3", color = primaryPurple, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
 
         LinearProgressIndicator(
             progress = { currentStep / 3f },
@@ -68,7 +72,6 @@ fun OnboardingScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Hiển thị giao diện theo từng bước
         Box(modifier = Modifier.weight(1f)) {
             when (currentStep) {
                 1 -> StepGoal(selectedGoal) { selectedGoal = it }
@@ -77,11 +80,9 @@ fun OnboardingScreen(navController: NavController) {
             }
         }
 
-        // NÚT CHUYỂN TIẾP (ĐÃ THÊM LOGIC LƯU FIRESTORE)
         Button(
             onClick = {
                 if (currentStep < 3) {
-                    // RÀNG BUỘC: Bắt buộc chọn mới cho qua bước tiếp theo
                     if (currentStep == 1 && selectedGoal.isEmpty()) {
                         Toast.makeText(context, "Vui lòng chọn mục tiêu của bạn!", Toast.LENGTH_SHORT).show()
                         return@Button
@@ -96,61 +97,24 @@ fun OnboardingScreen(navController: NavController) {
                         Toast.makeText(context, "Vui lòng chọn mục tiêu mỗi ngày!", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
-                    // BƯỚC 3: ĐẨY DỮ LIỆU LÊN FIRESTORE
-                    isLoading = true
-                    val userId = FirebaseAuth.getInstance().currentUser?.uid
-
-                    if (userId != null) {
-                        val db = FirebaseFirestore.getInstance()
-
-                        // Đóng gói dữ liệu thành một Map
-                        val userProfile = hashMapOf(
-                            "goal" to selectedGoal,
-                            "level" to selectedLevel,
-                            "wordsPerDay" to selectedWordsPerDay,
-                            "onboardingCompleted" to true
-                        )
-
-                        db.collection("users").document(userId)
-                            .set(userProfile, SetOptions.merge())
-                            .addOnSuccessListener {
-                                isLoading = false
-                                Toast.makeText(context, "Thiết lập thành công!", Toast.LENGTH_SHORT).show()
-                                navController.navigate("dashboard") {
-                                    popUpTo("onboarding") { inclusive = true }
-                                }
-                            }
-                            .addOnFailureListener { e ->
-                                isLoading = false
-                                Toast.makeText(context, "Lỗi: ${e.message}", Toast.LENGTH_LONG).show()
-                            }
-                    } else {
-                        isLoading = false
-                        Toast.makeText(context, "Lỗi: Chưa đăng nhập!", Toast.LENGTH_SHORT).show()
-                    }
+                    authViewModel.saveOnboarding(selectedGoal, selectedLevel, selectedWordsPerDay)
                 }
             },
-            enabled = !isLoading,
+            enabled = !authViewModel.isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = primaryPurple)
         ) {
-            if (isLoading) {
+            if (authViewModel.isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
             } else {
-                Text(
-                    text = if (currentStep == 3) "Bắt đầu học →" else "Tiếp tục →",
-                    fontSize = 16.sp,
-                    fontFamily = BeVietnamPro
-                )
+                Text(text = if (currentStep == 3) "Bắt đầu học →" else "Tiếp tục →", fontSize = 16.sp, fontFamily = BeVietnamPro)
             }
         }
     }
 }
-
-// ... (CÁC HÀM StepIcon, StepGoal, StepLevel, StepWordsPerDay, OnboardingOptionCard GIỮ NGUYÊN NHƯ CŨ) ...
 
 @Composable
 fun StepIcon(iconRes: Int) {

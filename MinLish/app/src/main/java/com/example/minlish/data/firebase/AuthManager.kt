@@ -1,4 +1,4 @@
-package com.example.minlish.firebase
+package com.example.minlish.data.firebase
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 
