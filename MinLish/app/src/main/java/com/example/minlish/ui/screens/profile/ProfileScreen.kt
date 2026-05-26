@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.minlish.ui.screens.auth.BeVietnamPro
+import com.example.minlish.utils.NotificationHelper
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -190,12 +191,13 @@ fun ProfileScreen(navController: NavController) {
                             Text(text = "Nhắc nhở hàng ngày", fontSize = 16.sp, fontFamily = BeVietnamPro, color = Color.DarkGray)
                             Switch(
                                 checked = isReminderEnabled,
-                                onCheckedChange = { isReminderEnabled = it },
+                                onCheckedChange = { 
+                                    isReminderEnabled = it 
+                                },
                                 colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = primaryPurple)
                             )
                         }
                         HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
-
                         SettingRow(label = "Giờ nhắc", value = "20:00")
                     }
                 }

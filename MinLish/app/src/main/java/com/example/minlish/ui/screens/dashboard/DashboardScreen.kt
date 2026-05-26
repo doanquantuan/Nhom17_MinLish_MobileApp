@@ -1,8 +1,11 @@
 package com.example.minlish.ui.screens.dashboard
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
@@ -10,17 +13,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.minlish.ui.screens.auth.BeVietnamPro
-import com.example.minlish.ui.screens.profile.ProfileScreen // Đảm bảo import đúng file profile của bạn
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.minlish.ui.components.RetentionRow
+import com.example.minlish.ui.components.SimpleBarChart
+import com.example.minlish.ui.components.StatCard
+import com.example.minlish.ui.screens.auth.BeVietnamPro
+import com.example.minlish.ui.screens.profile.ProfileScreen
+import com.example.minlish.viewmodel.DashboardViewModel
 
 @Composable
-fun DashboardScreen(navController: NavController) {
-    // Biến lưu vị trí nút đang được bấm (0: Trang chủ, ..., 4: Cá nhân)
+fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel = viewModel()) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val primaryPurple = Color(0xFF534AB7)
+    val dashboardData by viewModel.dashboardData.collectAsState()
+    val statsData by viewModel.statsData.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -66,20 +78,186 @@ fun DashboardScreen(navController: NavController) {
             }
         }
     ) { innerPadding ->
-        // Vùng hiển thị nội dung động thay đổi theo nút bấm
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
             when (selectedTab) {
-                0 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Giao diện Trang chủ sẽ viết ở đây") }
-                1 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Giao diện Bộ từ") }
-                2 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Giao diện Học từ vựng") }
-                3 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Giao diện Thống kê") }
-
-                // NÚT THỨ 5: GỌI TRANG PROFILE SỬ DỤNG CHUNG KHUNG BOTTOM BAR
+                0 -> HomeContent(dashboardData, primaryPurple)
+                1 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Giao diện Bộ từ", fontFamily = BeVietnamPro) }
+                2 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Giao diện Học từ vựng", fontFamily = BeVietnamPro) }
+                3 -> StatisticsContent(statsData, primaryPurple)
                 4 -> ProfileScreen(navController)
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeContent(data: com.example.minlish.model.DashboardData, primaryColor: Color) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(text = "Chào buổi sáng", fontFamily = BeVietnamPro, fontSize = 14.sp, color = Color.Gray)
+                    Text(text = "Minh Khoa 👋", fontFamily = BeVietnamPro, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(primaryColor.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "MK", color = primaryColor, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = primaryColor),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "Hôm nay", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = BeVietnamPro)
+                        Text(text = data.dailyPlan, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
+                    }
+                    Button(
+                        onClick = { /* TODO */ },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.2f)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(text = "Học ngay", color = Color.White, fontFamily = BeVietnamPro)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatCard(label = "TỪ ĐÃ HỌC", value = data.userStats.wordsLearned.toString(), modifier = Modifier.weight(1f), valueColor = primaryColor)
+                StatCard(
+                    label = "STREAK", 
+                    value = data.userStats.streak.toString(), 
+                    modifier = Modifier.weight(1f), 
+                    valueColor = Color(0xFFE67E22),
+                    icon = { Text("🔥") }
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatCard(label = "ACCURACY", value = "${data.userStats.accuracy}%", modifier = Modifier.weight(1f), valueColor = Color(0xFF27AE60))
+                StatCard(label = "LEVEL", value = data.userStats.level, modifier = Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        item {
+            Text(text = "Bộ từ của tôi", fontFamily = BeVietnamPro, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        items(data.wordSets) { deck ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = deck.deckName, fontFamily = BeVietnamPro, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "120 từ · ${deck.retentionRate}% thuộc", fontFamily = BeVietnamPro, fontSize = 12.sp, color = Color.Gray)
+                    }
+                    if (deck.tag.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .background(primaryColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(text = deck.tag, color = primaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatisticsContent(data: com.example.minlish.model.StatisticsData, primaryColor: Color) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        item {
+            Text(text = "Thống kê", fontFamily = BeVietnamPro, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = primaryColor)
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        item {
+            Text(text = "Hoạt động 7 ngày qua", fontFamily = BeVietnamPro, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(16.dp))
+            SimpleBarChart(
+                data = data.weeklyActivity.map { it.wordsCount },
+                labels = data.weeklyActivity.map { it.day },
+                barColor = primaryColor
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+
+        item {
+            Text(text = "Retention rate theo deck", fontFamily = BeVietnamPro, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(8.dp))
+            data.retentionRates.forEachIndexed { index, deck ->
+                val color = when(index % 3) {
+                    0 -> primaryColor
+                    1 -> Color(0xFF27AE60)
+                    else -> Color(0xFFF39C12)
+                }
+                RetentionRow(name = deck.deckName, rate = deck.retentionRate, color = color)
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatCard(
+                    label = "TỔNG PHIÊN HỌC", 
+                    value = data.totalSessions.toString(), 
+                    modifier = Modifier.weight(1f),
+                    backgroundColor = primaryColor.copy(alpha = 0.05f),
+                    valueColor = primaryColor
+                )
+                StatCard(
+                    label = "THỜI GIAN HỌC", 
+                    value = data.totalStudyTime, 
+                    modifier = Modifier.weight(1f),
+                    backgroundColor = Color(0xFF27AE60).copy(alpha = 0.05f),
+                    valueColor = Color(0xFF27AE60)
+                )
             }
         }
     }
