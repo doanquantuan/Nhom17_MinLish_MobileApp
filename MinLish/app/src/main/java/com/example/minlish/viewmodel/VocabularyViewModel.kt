@@ -129,6 +129,7 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
             _isLoading.value = true
             try {
                 val userId = auth.currentUser?.uid ?: ""
+                android.util.Log.d("VocabVM", "Creating set for user: $userId")
                 val newSet = VocabularySet(
                     userId = userId,
                     title = title,
@@ -138,9 +139,11 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
                     updateAt = System.currentTimeMillis()
                 )
                 repository.createSet(newSet)
+                android.util.Log.d("VocabVM", "Set created successfully")
                 loadVocabularySets()
                 onComplete(true)
             } catch (e: Exception) {
+                android.util.Log.e("VocabVM", "Error creating set", e)
                 onComplete(false)
             } finally {
                 _isLoading.value = false

@@ -38,9 +38,9 @@ class VocabularySetRepository (private val db: FirebaseFirestore) {
     suspend fun getSetsByUserId(userId: String): List<VocabularySet> {
         return db.collection("vocabulary_sets")
             .whereEqualTo("userId", userId)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
             .get()
             .await()
             .toObjects(VocabularySet::class.java)
+            .sortedByDescending { it.createdAt }
     }
 }

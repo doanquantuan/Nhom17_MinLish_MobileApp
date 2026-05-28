@@ -43,6 +43,7 @@ fun VocabularySetScreen(
     val isLoading by viewModel.isLoading.collectAsState()
 
     LaunchedEffect(Unit) {
+        android.util.Log.d("VocabSetScreen", "Refreshing vocabulary sets")
         viewModel.loadVocabularySets()
     }
 

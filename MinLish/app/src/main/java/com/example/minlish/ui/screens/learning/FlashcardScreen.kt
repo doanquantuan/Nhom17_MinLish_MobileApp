@@ -29,7 +29,11 @@ fun FlashcardScreen(
     val words by viewModel.currentSessionWords.collectAsState()
     val currentIndex by viewModel.currentIndex.collectAsState()
 
-    if (words.isNotEmpty() && currentIndex < words.size) {
+    if (words.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = PrimaryPurple)
+        }
+    } else if (currentIndex < words.size) {
         val currentWord = words[currentIndex]
         var showMeaning by remember(currentIndex) { mutableStateOf(false) }
 

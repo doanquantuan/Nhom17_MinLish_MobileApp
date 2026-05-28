@@ -13,6 +13,7 @@ import com.example.minlish.ui.screens.dashboard.DashboardScreen
 import com.example.minlish.ui.screens.auth.OnboardingScreen
 import com.example.minlish.ui.screens.learning.FlashcardScreen
 import com.example.minlish.ui.screens.learning.SrsReviewScreen
+import com.example.minlish.ui.screens.notification.NotificationScreen
 import com.example.minlish.ui.screens.vocabulary.WordSetListScreen
 import com.example.minlish.ui.screens.vocabulary.*
 import com.example.minlish.viewmodel.LearningViewModel
@@ -24,7 +25,7 @@ fun AppNavigation() {
     val currentUser = FirebaseAuth.getInstance().currentUser
     val learningViewModel: LearningViewModel = viewModel()
     
-    val startingPage = if (currentUser != null) "dashboard" else "login"
+    val startingPage = if (currentUser != null) "dashboard/0" else "login"
 
     NavHost(
         navController = navController,
@@ -42,8 +43,16 @@ fun AppNavigation() {
             OnboardingScreen(navController)
         }
 
-        composable("dashboard") {
-            DashboardScreen(navController)
+        composable(
+            route = "dashboard/{tabIndex}",
+            arguments = listOf(navArgument("tabIndex") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val tabIndex = backStackEntry.arguments?.getInt("tabIndex") ?: 0
+            DashboardScreen(
+                navController = navController,
+                learningViewModel = learningViewModel,
+                initialTab = tabIndex
+            )
         }
 
         // Vocabulary feature routes
@@ -109,7 +118,7 @@ fun AppNavigation() {
             if (isFinished.value) {
                 LaunchedEffect(Unit) {
                     navController.navigate("session_summary") {
-                        popUpTo("dashboard") { inclusive = false }
+                        popUpTo("dashboard/0") { inclusive = false }
                     }
                 }
             }
@@ -119,14 +128,20 @@ fun AppNavigation() {
             SrsReviewScreen(
                 viewModel = learningViewModel,
                 onNavigateHome = { 
-                    navController.navigate("dashboard") {
-                        popUpTo("dashboard") { inclusive = true }
+                    navController.navigate("dashboard/0") {
+                        popUpTo("dashboard/0") { inclusive = true }
                     }
                 },
                 onLearnAnother = { 
-                    navController.navigate("dashboard") 
+                    navController.navigate("dashboard/2") {
+                        popUpTo("dashboard/0") { inclusive = false }
+                    }
                 }
             )
+        }
+
+        composable("notifications") {
+            NotificationScreen(navController)
         }
     }
 }

@@ -28,6 +28,17 @@ fun WordSetListScreen(
 ) {
     val decks by viewModel.decks.collectAsState()
 
+    WordSetListContent(
+        decks = decks,
+        onNavigateToFlashcard = onNavigateToFlashcard
+    )
+}
+
+@Composable
+fun WordSetListContent(
+    decks: List<VocabDeck>,
+    onNavigateToFlashcard: (String, Boolean) -> Unit
+) {
     Scaffold(
         topBar = {
             Text(

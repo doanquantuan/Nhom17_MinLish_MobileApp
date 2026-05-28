@@ -24,14 +24,45 @@ import com.example.minlish.ui.components.SimpleBarChart
 import com.example.minlish.ui.components.StatCard
 import com.example.minlish.ui.screens.auth.BeVietnamPro
 import com.example.minlish.ui.screens.profile.ProfileScreen
+import com.example.minlish.ui.screens.vocabulary.VocabularySetScreenContent
+import com.example.minlish.ui.screens.vocabulary.WordSetListContent
+import com.example.minlish.navigation.Routes
+import com.example.minlish.viewmodel.AuthViewModel
 import com.example.minlish.viewmodel.DashboardViewModel
+import com.example.minlish.viewmodel.LearningViewModel
+import com.example.minlish.viewmodel.VocabularyViewModel
 
 @Composable
-fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel = viewModel()) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+fun DashboardScreen(
+    navController: NavController, 
+    viewModel: DashboardViewModel = viewModel(),
+    vocabViewModel: VocabularyViewModel = viewModel(),
+    learningViewModel: LearningViewModel = viewModel(),
+    authViewModel: AuthViewModel = viewModel(),
+    initialTab: Int = 0
+) {
+    var selectedTab by remember { mutableIntStateOf(initialTab) }
     val primaryPurple = Color(0xFF534AB7)
     val dashboardData by viewModel.dashboardData.collectAsState()
     val statsData by viewModel.statsData.collectAsState()
+    
+    // Auth state for name sync
+    val userName = authViewModel.userName
+    
+    // Initial load
+    LaunchedEffect(Unit) {
+        authViewModel.loadUserProfile()
+        vocabViewModel.loadVocabularySets()
+        viewModel.refreshData()
+    }
+    
+    // Vocab state
+    val vocabularySets by vocabViewModel.vocabularySets.collectAsState()
+    val setWordCounts by vocabViewModel.setWordCounts.collectAsState()
+    val isVocabLoading by vocabViewModel.isLoading.collectAsState()
+    
+    // Learning state
+    val decks by learningViewModel.decks.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -83,9 +114,36 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
                 .padding(innerPadding)
         ) {
             when (selectedTab) {
-                0 -> HomeContent(dashboardData, primaryPurple)
-                1 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Giao diện Bộ từ", fontFamily = BeVietnamPro) }
-                2 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Giao diện Học từ vựng", fontFamily = BeVietnamPro) }
+                0 -> HomeContent(
+                    data = dashboardData, 
+                    primaryColor = primaryPurple, 
+                    displayName = userName,
+                    onStartLearning = {
+                        learningViewModel.startSession("all", true)
+                        navController.navigate("flashcard")
+                    },
+                    onNavigateToNotifications = {
+                        navController.navigate("notifications")
+                    }
+                )
+                1 -> VocabularySetScreenContent(
+                    vocabularySets = vocabularySets,
+                    setWordCounts = setWordCounts,
+                    isLoading = isVocabLoading,
+                    onAddSetClick = { navController.navigate(Routes.CreateSet.route) },
+                    onDeleteSet = { vocabViewModel.deleteVocabularySet(it) },
+                    onEditSet = { vocabViewModel.updateVocabularySet(it) },
+                    onSetClick = { setId ->
+                        navController.navigate(Routes.VocabularyList.passSetId(setId))
+                    },
+                    bottomBar = {} // BottomBar is managed by DashboardScreen
+                )
+                2 -> WordSetListContent(
+                    decks = decks
+                ) { deckId, isReview ->
+                    learningViewModel.startSession(deckId, isReview)
+                    navController.navigate("flashcard")
+                }
                 3 -> StatisticsContent(statsData, primaryPurple)
                 4 -> ProfileScreen(navController)
             }
@@ -94,7 +152,13 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
 }
 
 @Composable
-fun HomeContent(data: com.example.minlish.model.DashboardData, primaryColor: Color) {
+fun HomeContent(
+    data: com.example.minlish.model.DashboardData, 
+    primaryColor: Color, 
+    displayName: String,
+    onStartLearning: () -> Unit,
+    onNavigateToNotifications: () -> Unit
+) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -108,15 +172,26 @@ fun HomeContent(data: com.example.minlish.model.DashboardData, primaryColor: Col
             ) {
                 Column {
                     Text(text = "Chào buổi sáng", fontFamily = BeVietnamPro, fontSize = 14.sp, color = Color.Gray)
-                    Text(text = "Minh Khoa 👋", fontFamily = BeVietnamPro, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "$displayName 👋", fontFamily = BeVietnamPro, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(primaryColor.copy(alpha = 0.1f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "MK", color = primaryColor, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onNavigateToNotifications) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = primaryColor
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(primaryColor.copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val initials = displayName.split(" ").mapNotNull { it.firstOrNull() }.joinToString("").take(2).uppercase()
+                        Text(text = initials, color = primaryColor, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -137,7 +212,7 @@ fun HomeContent(data: com.example.minlish.model.DashboardData, primaryColor: Col
                         Text(text = data.dailyPlan, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
                     }
                     Button(
-                        onClick = { /* TODO */ },
+                        onClick = onStartLearning,
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.2f)),
                         shape = RoundedCornerShape(8.dp)
                     ) {

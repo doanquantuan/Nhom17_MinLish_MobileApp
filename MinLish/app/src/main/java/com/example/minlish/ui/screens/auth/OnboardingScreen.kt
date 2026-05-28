@@ -44,7 +44,7 @@ fun OnboardingScreen(navController: NavController, authViewModel: AuthViewModel 
     LaunchedEffect(authViewModel.navigateToDashboard) {
         if (authViewModel.navigateToDashboard) {
             authViewModel.navigateToDashboard = false
-            navController.navigate("dashboard") { popUpTo("onboarding") { inclusive = true } }
+            navController.navigate("dashboard/0") { popUpTo("onboarding") { inclusive = true } }
         }
     }
 

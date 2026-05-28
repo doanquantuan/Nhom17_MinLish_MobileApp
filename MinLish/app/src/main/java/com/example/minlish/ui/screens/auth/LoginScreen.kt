@@ -57,7 +57,7 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
     LaunchedEffect(authViewModel.navigateToDashboard, authViewModel.navigateToOnboarding) {
         if (authViewModel.navigateToDashboard) {
             authViewModel.navigateToDashboard = false
-            navController.navigate("dashboard") { popUpTo("login") { inclusive = true } }
+            navController.navigate("dashboard/0") { popUpTo("login") { inclusive = true } }
         } else if (authViewModel.navigateToOnboarding) {
             authViewModel.navigateToOnboarding = false
             navController.navigate("onboarding") { popUpTo("login") { inclusive = true } }
