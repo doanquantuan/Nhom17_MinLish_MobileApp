@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 package com.example.minlish.data.firebase
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.FirebaseAuth
@@ -62,3 +63,7 @@ object AuthManager {
 
     fun getCurrentUser() = auth.currentUser
 }
+=======
+package com.example.minlish.firebase
+
+>>>>>>> feature/learning

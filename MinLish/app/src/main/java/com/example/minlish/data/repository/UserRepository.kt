@@ -1,5 +1,6 @@
 package com.example.minlish.data.repository
 
+<<<<<<< HEAD
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 
@@ -39,3 +40,5 @@ class UserRepository {
             .addOnSuccessListener { onSuccess() }
     }
 }
+=======
+>>>>>>> feature/learning

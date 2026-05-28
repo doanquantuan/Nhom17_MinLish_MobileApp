@@ -1,5 +1,6 @@
 package com.example.minlish.data.repository
 
+<<<<<<< HEAD
 import com.example.minlish.data.firebase.AuthManager
 import com.google.firebase.auth.FirebaseUser
 
@@ -22,3 +23,5 @@ class AuthRepository {
 
     fun getCurrentUser(): FirebaseUser? = AuthManager.getCurrentUser()
 }
+=======
+>>>>>>> feature/learning

@@ -47,7 +47,6 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
     val grayColor = Color(0xFF9E9E9E)
     val context = LocalContext.current
 
-    // Lắng nghe sự kiện hiển thị thông báo từ ViewModel
     LaunchedEffect(authViewModel.toastMessage) {
         authViewModel.toastMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
@@ -55,7 +54,6 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
         }
     }
 
-    // Lắng nghe điều hướng chuyển trang từ ViewModel
     LaunchedEffect(authViewModel.navigateToDashboard, authViewModel.navigateToOnboarding) {
         if (authViewModel.navigateToDashboard) {
             authViewModel.navigateToDashboard = false

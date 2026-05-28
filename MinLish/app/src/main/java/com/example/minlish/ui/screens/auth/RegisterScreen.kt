@@ -1,5 +1,6 @@
 package com.example.minlish.ui.screens.auth
 
+<<<<<<< HEAD
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -94,3 +95,5 @@ fun RegisterScreen(navController: NavController, authViewModel: AuthViewModel = 
         }
     }
 }
+=======
+>>>>>>> feature/learning
