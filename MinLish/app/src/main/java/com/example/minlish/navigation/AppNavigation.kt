@@ -1,4 +1,4 @@
-package com.example.minlish.ui.navigation
+package com.example.minlish.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.*
