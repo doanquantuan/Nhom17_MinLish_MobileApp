@@ -1,7 +1,5 @@
 package com.example.minlish.ui.screens.learning
 
-<<<<<<< HEAD
-=======
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -14,7 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minlish.ui.theme.*
@@ -27,7 +24,6 @@ fun SrsReviewScreen(
     onLearnAnother: () -> Unit
 ) {
     val stats by viewModel.sessionStats.collectAsState()
-    val dailyPlan by viewModel.dailyPlan.collectAsState()
 
     Scaffold(
         containerColor = BackgroundGray
@@ -130,7 +126,7 @@ fun SrsReviewScreen(
                             color = Color(0xFFE65100)
                         )
                         Text(
-                            "${dailyPlan.streak} ngày",
+                            "8 ngày",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFE65100)
@@ -193,4 +189,3 @@ fun StatCard(value: String, label: String, color: Color, modifier: Modifier = Mo
         }
     }
 }
->>>>>>> feature/learning

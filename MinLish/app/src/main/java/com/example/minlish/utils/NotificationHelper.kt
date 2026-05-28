@@ -1,6 +1,5 @@
 package com.example.minlish.utils
 
-<<<<<<< HEAD
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -38,5 +37,3 @@ object NotificationHelper {
         notificationManager.notify(1, builder.build())
     }
 }
-=======
->>>>>>> feature/learning

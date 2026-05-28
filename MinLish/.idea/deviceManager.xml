@@ -6,10 +6,14 @@
         <ColumnSorterState>
           <option name="column" value="Name" />
 <<<<<<< HEAD
+<<<<<<< HEAD
           <option name="order" value="DESCENDING" />
 =======
           <option name="order" value="ASCENDING" />
 >>>>>>> feature/learning
+=======
+          <option name="order" value="ASCENDING" />
+>>>>>>> feature/vocabulary
         </ColumnSorterState>
       </list>
     </option>

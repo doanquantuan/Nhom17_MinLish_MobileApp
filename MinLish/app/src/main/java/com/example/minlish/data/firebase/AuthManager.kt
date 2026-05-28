@@ -1,5 +1,5 @@
-<<<<<<< HEAD
 package com.example.minlish.data.firebase
+
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 
@@ -15,11 +15,10 @@ object AuthManager {
     ) {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener {
-                // 1. Đăng ký xong thì gửi mail xác thực ngay
                 auth.currentUser?.sendEmailVerification()
                     ?.addOnCompleteListener { task ->
                         if (task.isSuccessful) {
-                            onSuccess() // Gửi mail thành công thì mới báo Đăng ký thành công
+                            onSuccess()
                         } else {
                             onError("Không thể gửi email xác thực: ${task.exception?.message}")
                         }
@@ -63,7 +62,3 @@ object AuthManager {
 
     fun getCurrentUser() = auth.currentUser
 }
-=======
-package com.example.minlish.firebase
-
->>>>>>> feature/learning

@@ -1,6 +1,5 @@
 package com.example.minlish.viewmodel
 
-<<<<<<< HEAD
 import androidx.lifecycle.ViewModel
 import com.example.minlish.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,5 +40,3 @@ class DashboardViewModel : ViewModel() {
     )
     val statsData = _statsData.asStateFlow()
 }
-=======
->>>>>>> feature/learning

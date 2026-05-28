@@ -12,7 +12,6 @@
           "package_name": "com.example.minlish"
         }
       },
-<<<<<<< HEAD
       "oauth_client": [
         {
           "client_id": "67533858089-b0q0bcp28rr7ut23526n6n1lvgtn2uju.apps.googleusercontent.com",
@@ -27,9 +26,6 @@
           "client_type": 3
         }
       ],
-=======
-      "oauth_client": [],
->>>>>>> feature/learning
       "api_key": [
         {
           "current_key": "AIzaSyCCBUw8JDTiBO_IIORcacaG7Rx5KwN_mPk"
@@ -37,16 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-<<<<<<< HEAD
           "other_platform_oauth_client": [
             {
               "client_id": "67533858089-7rg7mp6gjcpi43rehogvj22g0dm4tu6i.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
-=======
-          "other_platform_oauth_client": []
->>>>>>> feature/learning
         }
       }
     }

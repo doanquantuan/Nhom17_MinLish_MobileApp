@@ -1,7 +1,5 @@
 package com.example.minlish.ui.screens.learning
 
-<<<<<<< HEAD
-=======
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -30,7 +28,6 @@ fun FlashcardScreen(
 ) {
     val words by viewModel.currentSessionWords.collectAsState()
     val currentIndex by viewModel.currentIndex.collectAsState()
-    val isFinished by viewModel.isFinished.collectAsState()
 
     if (words.isNotEmpty() && currentIndex < words.size) {
         val currentWord = words[currentIndex]
@@ -241,12 +238,9 @@ fun RowScope.SrsButton(
 @Preview(showBackground = true)
 @Composable
 fun FlashcardPreview() {
-    MinLishTheme {
-        FlashcardFront(VocabWord(
-            word = "ambiguous",
-            phonetic = "/æmˈbɪɡjuəs/",
-            partOfSpeech = "adjective"
-        ))
-    }
+    FlashcardFront(VocabWord(
+        word = "ambiguous",
+        phonetic = "/æmˈbɪɡjuəs/",
+        partOfSpeech = "adjective"
+    ))
 }
->>>>>>> feature/learning
