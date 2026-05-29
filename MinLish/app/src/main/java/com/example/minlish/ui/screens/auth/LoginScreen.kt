@@ -43,6 +43,8 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
+    var resetEmail by remember { mutableStateOf("") }
     val primaryPurple = Color(0xFF534AB7)
     val grayColor = Color(0xFF9E9E9E)
     val context = LocalContext.current
@@ -128,7 +130,20 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple, unfocusedBorderColor = Color(0xFFE0E0E0), focusedLeadingIconColor = primaryPurple, unfocusedLeadingIconColor = grayColor, focusedTrailingIconColor = primaryPurple, unfocusedTrailingIconColor = grayColor),
                     singleLine = true
                 )
-                Spacer(modifier = Modifier.height(32.dp))
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                    Text(
+                        text = "Quên mật khẩu?",
+                        color = primaryPurple,
+                        fontFamily = BeVietnamPro,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clickable { showResetDialog = true }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
                     onClick = { authViewModel.login(email, password) },
@@ -166,6 +181,46 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
                 Row {
                     Text(text = "Chưa có tài khoản? ", color = Color.Gray, fontFamily = BeVietnamPro)
                     Text(text = "Đăng ký", color = primaryPurple, fontWeight = FontWeight.Medium, fontFamily = BeVietnamPro, modifier = Modifier.clickable { navController.navigate("register") })
+                }
+                if (showResetDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showResetDialog = false },
+                        title = { Text(text = "Khôi phục mật khẩu", fontFamily = BeVietnamPro, fontWeight = FontWeight.Bold) },
+                        text = {
+                            Column {
+                                Text(text = "Nhập email tài khoản của bạn để nhận liên kết đặt lại mật khẩu mới.", fontFamily = BeVietnamPro, fontSize = 14.sp, color = Color.Gray)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                OutlinedTextField(
+                                    value = resetEmail,
+                                    onValueChange = { resetEmail = it },
+                                    placeholder = { Text("Nhập Email của bạn") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    authViewModel.resetPassword(resetEmail) {
+                                        showResetDialog = false
+                                        resetEmail = ""
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = primaryPurple)
+                            ) {
+                                Text("Gửi Email", fontFamily = BeVietnamPro)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showResetDialog = false }) {
+                                Text("Hủy", color = Color.Gray, fontFamily = BeVietnamPro)
+                            }
+                        },
+                        containerColor = Color.White,
+                        shape = RoundedCornerShape(16.dp)
+                    )
                 }
             }
         }

@@ -61,4 +61,10 @@ object AuthManager {
     }
 
     fun getCurrentUser() = auth.currentUser
+
+    fun sendPasswordResetEmail(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        auth.sendPasswordResetEmail(email)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { onError(it.message ?: "Gửi email khôi phục thất bại") }
+    }
 }

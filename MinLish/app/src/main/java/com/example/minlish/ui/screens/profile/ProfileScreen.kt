@@ -21,13 +21,25 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.minlish.ui.screens.auth.BeVietnamPro
 import com.example.minlish.viewmodel.AuthViewModel
+import com.example.minlish.viewmodel.VocabularyViewModel
 
 @Composable
-fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = viewModel()) {
+fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = viewModel(), vocabViewModel: VocabularyViewModel = viewModel()) {
     val primaryPurple = Color(0xFF534AB7)
     val lightGrayBg = Color(0xFFF5F5F5)
     var isReminderEnabled by remember { mutableStateOf(true) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    val csvPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            vocabViewModel.importCsv(uri, context) { _, message ->
+                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     // Gọi tải dữ liệu profile qua ViewModel khi mở màn hình
     LaunchedEffect(Unit) {
@@ -45,7 +57,8 @@ fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = v
                 modifier = Modifier.size(90.dp).background(Color(0xFFE8E7F5), shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = if (avatarText.isNotEmpty()) avatarText else "MK", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = primaryPurple, fontFamily = BeVietnamPro)
+                // FIX: Dùng ifEmpty cho code gọn và chuẩn Kotlin
+                Text(text = avatarText.ifEmpty { "MK" }, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = primaryPurple, fontFamily = BeVietnamPro)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -84,7 +97,9 @@ fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = v
         Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Column {
                 Text(text = "Cài đặt học", color = Color.Gray, fontSize = 14.sp, fontFamily = BeVietnamPro, modifier = Modifier.padding(bottom = 8.dp))
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+
+                // FIX LỖI ELEVATION: Bỏ luôn chữ định danh, chỉ truyền số 2.dp
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
                     Column {
                         SettingRow(label = "Từ mới mỗi ngày", value = authViewModel.userWordsPerDay.toString())
                         HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
@@ -101,18 +116,30 @@ fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = v
 
             Column {
                 Text(text = "Dữ liệu", color = Color.Gray, fontSize = 14.sp, fontFamily = BeVietnamPro, modifier = Modifier.padding(bottom = 8.dp))
+
                 Button(
-                    onClick = { },
+                    onClick = { csvPickerLauncher.launch("*/*") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    // Đổi CardDefaults thành ButtonDefaults ở dòng dưới này:
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                    // FIX LỖI ELEVATION: Truyền số 2.dp trực tiếp
+                    elevation = ButtonDefaults.buttonElevation(2.dp)
                 ) {
                     Text(text = "Import CSV", color = Color.Black, fontSize = 16.sp, fontFamily = BeVietnamPro, fontWeight = FontWeight.Medium)
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Lưu ý: Chỉ hỗ trợ định dạng file .csv\nThứ tự các cột: Từ vựng, Nghĩa, Loại từ, Phát âm, Ví dụ, Collocation, Ghi chú",
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontFamily = BeVietnamPro,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    lineHeight = 18.sp // Tăng khoảng cách dòng cho dễ đọc
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))

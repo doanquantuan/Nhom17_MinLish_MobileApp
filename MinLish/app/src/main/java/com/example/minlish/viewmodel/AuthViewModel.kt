@@ -153,4 +153,23 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
+
+    fun resetPassword(email: String, onComplete: () -> Unit) {
+        if (email.isBlank()) {
+            toastMessage = "Vui lòng nhập email"
+            return
+        }
+        isLoading = true
+        authRepo.sendPasswordResetEmail(email,
+            onSuccess = {
+                isLoading = false
+                toastMessage = "Email khôi phục mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư."
+                onComplete() // Đóng hộp thoại khi gửi thành công
+            },
+            onError = {
+                isLoading = false
+                toastMessage = it
+            }
+        )
+    }
 }

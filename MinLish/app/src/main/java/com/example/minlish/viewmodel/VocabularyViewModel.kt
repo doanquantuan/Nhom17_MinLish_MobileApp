@@ -13,7 +13,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.util.*
+import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class VocabularyViewModel(application: Application) : AndroidViewModel(application), TextToSpeech.OnInitListener {
     private val repository = VocabularySetRepository(FirebaseFirestore.getInstance())
@@ -222,6 +225,90 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
                 onComplete(false)
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun importCsv(uri: android.net.Uri, context: android.content.Context, onComplete: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                // 1. Mở và đọc file CSV từ thiết bị
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val reader = java.io.BufferedReader(java.io.InputStreamReader(inputStream))
+
+                // Đọc tất cả các dòng, bỏ qua dòng đầu tiên (dòng tiêu đề Header)
+                val lines = reader.readLines().drop(1)
+                reader.close()
+
+                if (lines.isEmpty()) {
+                    _isLoading.value = false
+                    onComplete(false, "File CSV trống hoặc không có dữ liệu!")
+                    return@launch
+                }
+
+                // 2. Tạo một Bộ từ (Set) mới để chứa các từ import này
+                val userId = auth.currentUser?.uid ?: ""
+                val db = FirebaseFirestore.getInstance()
+
+                // Xin Firestore một ID mới ngẫu nhiên cho Bộ từ
+                val setDoc = db.collection("vocabulary_sets").document()
+                val setId = setDoc.id
+
+                val currentDate = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+                val newSet = VocabularySet(
+                    id = setId,
+                    userId = userId,
+                    title = "Imported CSV ($currentDate)",
+                    description = "Dữ liệu được import tự động từ file CSV",
+                    category = "Tất cả"
+                )
+                // Lưu Bộ từ mới lên Firestore
+                setDoc.set(newSet).await()
+
+                // 3. Phân tích từng dòng CSV và lưu thành Từ vựng (ĐÃ CẬP NHẬT FULL 7 TRƯỜNG)
+                var successCount = 0
+                for (line in lines) {
+                    // Thêm tham số limit = -1 để hệ thống không bỏ qua các cột trống ở cuối file
+                    val columns = line.split(",")
+
+                    // Kiểm tra xem cột đầu tiên (Từ vựng) có chữ không
+                    if (columns.isNotEmpty() && columns[0].isNotBlank()) {
+                        val word = columns[0].trim()
+                        val meaning = if (columns.size > 1) columns[1].trim() else ""
+                        val wordType = if (columns.size > 2) columns[2].trim() else ""
+                        val pronunciation = if (columns.size > 3) columns[3].trim() else ""
+                        val example = if (columns.size > 4) columns[4].trim() else ""
+                        val collocation = if (columns.size > 5) columns[5].trim() else ""
+                        val note = if (columns.size > 6) columns[6].trim() else ""
+
+                        val newVocab = Vocabulary(
+                            setId = setId,
+                            word = word,
+                            meaning = meaning,
+                            wordType = wordType,
+                            pronunciation = pronunciation,
+                            example = example,
+                            collocation = collocation,
+                            note = note
+                        )
+
+                        // Gọi Repository để lưu từ vựng lên Firebase
+                        vocabularyRepository.addWord(newVocab)
+                        successCount++
+                    }
+                }
+
+                // Load lại danh sách Bộ từ để giao diện cập nhật
+                loadVocabularySets()
+
+                _isLoading.value = false
+                onComplete(true, "Tuyệt vời! Đã import thành công $successCount từ vựng.")
+
+            } catch (e: Exception) {
+                _isLoading.value = false
+                android.util.Log.e("MinLishError", "Lỗi Import CSV", e)
+                onComplete(false, "Lỗi import: Vui lòng kiểm tra lại định dạng file CSV.")
             }
         }
     }

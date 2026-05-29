@@ -21,4 +21,8 @@ class AuthRepository {
     }
 
     fun getCurrentUser(): FirebaseUser? = AuthManager.getCurrentUser()
+
+    fun sendPasswordResetEmail(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        AuthManager.sendPasswordResetEmail(email, onSuccess, onError)
+    }
 }
