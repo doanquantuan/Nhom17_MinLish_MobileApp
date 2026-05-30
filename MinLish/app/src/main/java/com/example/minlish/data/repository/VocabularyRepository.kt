@@ -55,4 +55,44 @@ class VocabularyRepository (private val db: FirebaseFirestore) {
             0
         }
     }
+
+    suspend fun getReviewCountBySet(setId: String): Int {
+        return try {
+            val result = db.collection("vocabularies")
+                .whereEqualTo("setId", setId)
+                .get()
+                .await()
+                .toObjects(Vocabulary::class.java)
+            result.count { it.status != "Mới" }
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    suspend fun getNewCountBySet(setId: String): Int {
+        return try {
+            val result = db.collection("vocabularies")
+                .whereEqualTo("setId", setId)
+                .whereEqualTo("status", "Mới")
+                .get()
+                .await()
+            result.size()
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    suspend fun getLearnedCountBySet(setId: String): Int {
+        return try {
+            val result = db.collection("vocabularies")
+                .whereEqualTo("setId", setId)
+                .whereEqualTo("status", "Thuộc")
+                .get()
+                .await()
+            result.size()
+        } catch (e: Exception) {
+            android.util.Log.e("VocabRepo", "Error getting learned count", e)
+            0
+        }
+    }
 }

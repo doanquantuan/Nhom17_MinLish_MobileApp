@@ -20,16 +20,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.minlish.model.VocabDeck
 import com.example.minlish.ui.theme.*
 import com.example.minlish.viewmodel.LearningViewModel
+import com.example.minlish.viewmodel.DeckFilterMode
 
 @Composable
 fun WordSetListScreen(
     onNavigateToFlashcard: (String, Boolean) -> Unit,
     viewModel: LearningViewModel = viewModel()
 ) {
-    val decks by viewModel.decks.collectAsState()
+    val decks by viewModel.filteredDecks.collectAsState()
+    val filterMode by viewModel.filterMode.collectAsState()
 
     WordSetListContent(
         decks = decks,
+        filterMode = filterMode,
+        onFilterChange = { viewModel.setFilterMode(it) },
         onNavigateToFlashcard = onNavigateToFlashcard
     )
 }
@@ -37,17 +41,53 @@ fun WordSetListScreen(
 @Composable
 fun WordSetListContent(
     decks: List<VocabDeck>,
+    filterMode: DeckFilterMode,
+    onFilterChange: (DeckFilterMode) -> Unit,
     onNavigateToFlashcard: (String, Boolean) -> Unit
 ) {
     Scaffold(
         topBar = {
-            Text(
-                "Chọn bộ từ để học",
-                modifier = Modifier.padding(20.dp),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF534AB7)
-            )
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    "Học tập",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF534AB7)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = filterMode == DeckFilterMode.LEARN_NEW,
+                        onClick = { onFilterChange(DeckFilterMode.LEARN_NEW) },
+                        label = { Text("Học mới") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF534AB7),
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                    FilterChip(
+                        selected = filterMode == DeckFilterMode.REVIEW,
+                        onClick = { onFilterChange(DeckFilterMode.REVIEW) },
+                        label = { Text("Ôn tập") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF534AB7),
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                    FilterChip(
+                        selected = filterMode == DeckFilterMode.ALL,
+                        onClick = { onFilterChange(DeckFilterMode.ALL) },
+                        label = { Text("Tất cả") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF534AB7),
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+            }
         },
         containerColor = Color(0xFFF5F5F5)
     ) { padding ->
@@ -146,9 +186,14 @@ fun DeckCard(deck: VocabDeck, onHocMoi: () -> Unit, onOnTap: () -> Unit) {
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
+                    val statusText = if (deck.wordsLearned > 0 || deck.wordsToReview > 0) {
+                        "${deck.wordsLearned} từ - Đã thuộc"
+                    } else {
+                        "Chưa học"
+                    }
                     Text(
-                        "${deck.totalWords} từ · ${if (deck.wordsToReview > 0) "${deck.wordsToReview} cần ôn" else "Đã thuộc tốt"}",
-                        color = if (deck.wordsToReview > 0) Color(0xFFFF9800) else Color(0xFF4CAF50),
+                        statusText,
+                        color = if (deck.wordsLearned > 0) Color(0xFF4CAF50) else Color.Gray,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -163,8 +208,9 @@ fun DeckCard(deck: VocabDeck, onHocMoi: () -> Unit, onOnTap: () -> Unit) {
             
             Spacer(modifier = Modifier.height(16.dp))
             
+            val progress = if (deck.totalWords > 0) deck.wordsLearned.toFloat() / deck.totalWords else 0f
             LinearProgressIndicator(
-                progress = { 0.6f },
+                progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(4.dp),
@@ -210,7 +256,7 @@ fun DailyPlanCardPreview() {
 @Composable
 fun DeckCardPreview() {
     DeckCard(
-        deck = VocabDeck("1", "IELTS Academic", 120, 14, "IELTS", "#5A4FCF"),
+        deck = VocabDeck("1", "IELTS Academic", 120, 14, 45, "IELTS", "#5A4FCF"),
         onHocMoi = {},
         onOnTap = {}
     )

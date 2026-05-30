@@ -20,6 +20,7 @@ class AuthViewModel : ViewModel() {
     var navigateToDashboard by mutableStateOf(false)
     var navigateToOnboarding by mutableStateOf(false)
     var registerSuccess by mutableStateOf(false)
+    var showVerificationDialog by mutableStateOf(false)
 
     // Trạng thái dữ liệu màn hình Profile
     var userName by mutableStateOf("Tên của bạn")
@@ -46,8 +47,7 @@ class AuthViewModel : ViewModel() {
                     checkUserOnboarding(user.uid)
                 } else {
                     isLoading = false
-                    toastMessage = "Tài khoản chưa xác thực! Vui lòng kiểm tra Email."
-                    authRepo.logout()
+                    showVerificationDialog = true
                 }
             },
             onError = {
@@ -140,6 +140,25 @@ class AuthViewModel : ViewModel() {
     fun logout(onComplete: () -> Unit) {
         authRepo.logout()
         onComplete()
+    }
+
+    fun resendVerificationEmail() {
+        isLoading = true
+        authRepo.sendVerificationEmail(
+            onSuccess = {
+                isLoading = false
+                toastMessage = "Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư."
+            },
+            onError = {
+                isLoading = false
+                toastMessage = it
+            }
+        )
+    }
+
+    fun dismissVerificationDialog() {
+        showVerificationDialog = false
+        authRepo.logout()
     }
 
     // Kiểm tra phân luồng người dùng cũ / mới

@@ -14,6 +14,7 @@ data class DailyActivity(
 
 data class DeckRetention(
     val deckName: String,
+    val totalWords: Int,
     val retentionRate: Int,
     val tag: String = ""
 )

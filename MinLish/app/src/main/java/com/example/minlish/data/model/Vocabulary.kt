@@ -21,7 +21,14 @@ data class Vocabulary(
 
     val createdAt: Long = System.currentTimeMillis(),
 
-    val status: String = ""
+    val status: String = "Mới",
+    
+    // SM-2 parameters for persistence
+    val easeFactor: Double = 2.5,
+    val interval: Int = 0,
+    val repetitions: Int = 0,
+    val nextReview: Long = System.currentTimeMillis(),
+    val lastReviewed: Long? = null
 )
 
 

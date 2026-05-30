@@ -102,6 +102,7 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
             _isLoading.value = true
             try {
                 val userId = auth.currentUser?.uid
+                
                 val sets = if (userId != null) {
                     repository.getSetsByUserId(userId)
                 } else {

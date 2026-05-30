@@ -49,11 +49,27 @@ fun DashboardScreen(
     // Auth state for name sync
     val userName = authViewModel.userName
     
+    // Dashboard state refresh
+    val isFinished by learningViewModel.isFinished.collectAsState()
+    LaunchedEffect(isFinished) {
+        if (isFinished) {
+            viewModel.refreshData()
+            vocabViewModel.loadVocabularySets()
+        }
+    }
+
     // Initial load
-    LaunchedEffect(Unit) {
-        authViewModel.loadUserProfile()
-        vocabViewModel.loadVocabularySets()
-        viewModel.refreshData()
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == 0) {
+            authViewModel.loadUserProfile()
+            viewModel.refreshData()
+        }
+        if (selectedTab == 1) {
+            vocabViewModel.loadVocabularySets()
+        }
+        if (selectedTab == 2) {
+            learningViewModel.loadRealDecks()
+        }
     }
     
     // Vocab state
@@ -62,7 +78,8 @@ fun DashboardScreen(
     val isVocabLoading by vocabViewModel.isLoading.collectAsState()
     
     // Learning state
-    val decks by learningViewModel.decks.collectAsState()
+    val filteredDecks by learningViewModel.filteredDecks.collectAsState()
+    val filterMode by learningViewModel.filterMode.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -131,15 +148,23 @@ fun DashboardScreen(
                     setWordCounts = setWordCounts,
                     isLoading = isVocabLoading,
                     onAddSetClick = { navController.navigate(Routes.CreateSet.route) },
-                    onDeleteSet = { vocabViewModel.deleteVocabularySet(it) },
-                    onEditSet = { vocabViewModel.updateVocabularySet(it) },
+                    onDeleteSet = { 
+                        vocabViewModel.deleteVocabularySet(it)
+                        viewModel.refreshData() 
+                    },
+                    onEditSet = { 
+                        vocabViewModel.updateVocabularySet(it)
+                        viewModel.refreshData()
+                    },
                     onSetClick = { setId ->
                         navController.navigate(Routes.VocabularyList.passSetId(setId))
                     },
                     bottomBar = {} // BottomBar is managed by DashboardScreen
                 )
                 2 -> WordSetListContent(
-                    decks = decks
+                    decks = filteredDecks,
+                    filterMode = filterMode,
+                    onFilterChange = { learningViewModel.setFilterMode(it) }
                 ) { deckId, isReview ->
                     learningViewModel.startSession(deckId, isReview)
                     navController.navigate("flashcard")
@@ -262,7 +287,7 @@ fun HomeContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = deck.deckName, fontFamily = BeVietnamPro, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "120 từ · ${deck.retentionRate}% thuộc", fontFamily = BeVietnamPro, fontSize = 12.sp, color = Color.Gray)
+                        Text(text = "${deck.totalWords} từ · ${deck.retentionRate}% thuộc", fontFamily = BeVietnamPro, fontSize = 12.sp, color = Color.Gray)
                     }
                     if (deck.tag.isNotEmpty()) {
                         Box(

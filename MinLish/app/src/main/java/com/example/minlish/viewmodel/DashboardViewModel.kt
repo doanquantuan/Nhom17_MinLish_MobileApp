@@ -34,14 +34,16 @@ class DashboardViewModel : ViewModel() {
 
     fun refreshData() {
         val userId = auth.currentUser?.uid ?: return
+        android.util.Log.d("DashboardVM", "Refreshing dashboard for user: $userId")
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val sessions = statsRepo.getSessionsByUserId(userId)
                 val sets = setRepo.getSetsByUserId(userId)
+                android.util.Log.d("DashboardVM", "Dashboard found ${sets.size} sets")
                 
                 // Aggregate Stats
-                val totalWordsLearned = sets.sumOf { vocabRepo.getWordCountBySet(it.id) }
+                val totalWordsLearned = sets.sumOf { vocabRepo.getLearnedCountBySet(it.id) }
                 val streak = calculateStreak(sessions)
                 val accuracy = calculateAccuracy(sessions)
                 
@@ -55,6 +57,7 @@ class DashboardViewModel : ViewModel() {
                 val deckRetentions = sets.map { set ->
                     DeckRetention(
                         deckName = set.title,
+                        totalWords = vocabRepo.getWordCountBySet(set.id),
                         retentionRate = set.progress,
                         tag = set.category
                     )

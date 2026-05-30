@@ -21,4 +21,8 @@ class AuthRepository {
     }
 
     fun getCurrentUser(): FirebaseUser? = AuthManager.getCurrentUser()
+
+    fun sendVerificationEmail(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        AuthManager.sendVerificationEmail(onSuccess, onError)
+    }
 }
