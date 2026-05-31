@@ -127,7 +127,7 @@ fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = v
                     // FIX LỖI ELEVATION: Truyền số 2.dp trực tiếp
                     elevation = ButtonDefaults.buttonElevation(2.dp)
                 ) {
-                    Text(text = "Import CSV", color = Color.Black, fontSize = 16.sp, fontFamily = BeVietnamPro, fontWeight = FontWeight.Medium)
+                    Text(text = $$"Import CSV", color = Color.Black, fontSize = 16.sp, fontFamily = BeVietnamPro, fontWeight = FontWeight.Medium)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
