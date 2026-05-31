@@ -32,6 +32,9 @@ class LearningViewModel : ViewModel() {
     private val _decks = MutableStateFlow<List<VocabDeck>>(emptyList())
     val decks: StateFlow<List<VocabDeck>> = _decks.asStateFlow()
 
+    private val _totalWordsToReview = MutableStateFlow(0)
+    val totalWordsToReview: StateFlow<Int> = _totalWordsToReview.asStateFlow()
+
     private val _filterMode = MutableStateFlow(DeckFilterMode.ALL)
     val filterMode: StateFlow<DeckFilterMode> = _filterMode.asStateFlow()
 
@@ -46,6 +49,10 @@ class LearningViewModel : ViewModel() {
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun resetFinishedStatus() {
+        _isFinished.value = false
+    }
 
     fun setFilterMode(mode: DeckFilterMode) {
         _filterMode.value = mode
@@ -134,9 +141,10 @@ class LearningViewModel : ViewModel() {
             try {
                 val sets = setRepo.getSetsByUserId(userId)
                 val vocabDecks = sets.map { set ->
-                    val total = vocabRepo.getWordCountBySet(set.id)
-                    val toReview = vocabRepo.getReviewCountBySet(set.id)
-                    val learned = vocabRepo.getLearnedCountBySet(set.id)
+                    val allSetWords = vocabRepo.getWordsBySet(set.id)
+                    val total = allSetWords.size
+                    val toReview = allSetWords.count { it.repetitions > 0 } // Any word studied is in review pool
+                    val learned = allSetWords.count { it.status == "Thuộc" }
 
                     VocabDeck(
                         id = set.id,
@@ -149,6 +157,13 @@ class LearningViewModel : ViewModel() {
                     )
                 }
                 _decks.value = vocabDecks
+                _totalWordsToReview.value = vocabDecks.sumOf { 
+                    // For the top card, only count truly DUE words
+                    val now = System.currentTimeMillis()
+                    sets.find { s -> s.id == it.id }?.let { s ->
+                        vocabRepo.getWordsBySet(s.id).count { w -> w.repetitions > 0 && w.nextReview <= now }
+                    } ?: 0
+                }
             } catch (e: Exception) {
                 android.util.Log.e("LearningVM", "Error loading real decks", e)
                 _decks.value = emptyList()
@@ -182,12 +197,15 @@ class LearningViewModel : ViewModel() {
                     vocabRepo.getWordsBySet(deckId)
                 }
 
+                val now = System.currentTimeMillis()
                 val filteredWords = if (isReview) {
-                    // Review mode: words that are not NEW
-                    allWords.filter { it.status != "Mới" }
+                    // Review mode: all words that have been studied at least once,
+                    // but prioritized by those that are actually due.
+                    allWords.filter { it.repetitions > 0 }
+                        .sortedByDescending { it.nextReview <= now } // Due words first
                 } else {
                     // Learn New mode: words that are NEW
-                    allWords.filter { it.status == "Mới" }
+                    allWords.filter { it.repetitions == 0 }
                 }
 
                 if (filteredWords.isEmpty()) {
@@ -248,27 +266,48 @@ class LearningViewModel : ViewModel() {
             }
             val result = WordResult(word.word, speedStatus)
             
-            // Save to Firestore
+            // Save to Firestore using a background job that we can track
             viewModelScope.launch {
                 try {
                     val originalVocab = vocabRepo.getWordById(updatedWord.id)
                     if (originalVocab != null) {
+                        val newStatus = when {
+                            updatedWord.status == com.example.minlish.model.WordStatus.MASTERED -> "Thuộc"
+                            updatedWord.status == com.example.minlish.model.WordStatus.NEW -> "Mới"
+                            else -> "Ôn lại"
+                        }
+                        
                         val updatedVocab = originalVocab.copy(
-                            status = when {
-                                updatedWord.status == com.example.minlish.model.WordStatus.MASTERED -> "Thuộc"
-                                updatedWord.status == com.example.minlish.model.WordStatus.NEW -> "Mới"
-                                else -> "Ôn lại"
-                            },
+                            status = newStatus,
                             easeFactor = updatedWord.easeFactor,
                             interval = updatedWord.interval,
                             repetitions = updatedWord.repetitions,
                             nextReview = updatedWord.nextReview.time,
                             lastReviewed = updatedWord.lastReviewed?.time
                         )
+                        
+                        android.util.Log.d("LearningVM", "SAVING WORD: ${updatedVocab.word} | STATUS: ${updatedVocab.status} | REPS: ${updatedVocab.repetitions}")
                         vocabRepo.updateWord(updatedVocab)
+                        
+                        // Critical: Also update the local decks immediately so the UI doesn't have to wait for refreshData
+                        loadRealDecks()
+                        
+                        android.util.Log.d("LearningVM", "SAVE SUCCESS: ${updatedVocab.word}")
+
+                        // Finalize session if this was the last word
+                        if (index + 1 == currentWords.size) {
+                            val durationMs = System.currentTimeMillis() - sessionStartTime
+                            val durationSeconds = (durationMs / 1000).toInt()
+                            _sessionStats.value = _sessionStats.value.copy(totalTimeSeconds = durationSeconds)
+                            
+                            saveSessionToFirestore()
+                            loadCurrentStreak() // Refresh streak after saving
+                            _isFinished.value = true
+                            loadRealDecks() // Explicitly refresh decks locally
+                        }
                     }
                 } catch (e: Exception) {
-                    android.util.Log.e("LearningVM", "Error saving word progress", e)
+                    android.util.Log.e("LearningVM", "CRITICAL ERROR SAVING WORD", e)
                 }
             }
 
@@ -282,17 +321,6 @@ class LearningViewModel : ViewModel() {
 
             if (index + 1 < currentWords.size) {
                 _currentIndex.value = index + 1
-            } else {
-                val durationMs = System.currentTimeMillis() - sessionStartTime
-                val durationSeconds = (durationMs / 1000).toInt()
-                
-                _sessionStats.value = _sessionStats.value.copy(totalTimeSeconds = durationSeconds)
-                
-                viewModelScope.launch {
-                    saveSessionToFirestore()
-                    loadCurrentStreak() // Refresh streak after saving
-                    _isFinished.value = true
-                }
             }
         }
     }

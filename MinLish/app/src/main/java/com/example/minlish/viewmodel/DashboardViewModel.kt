@@ -12,7 +12,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
+import kotlinx.coroutines.tasks.await
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -40,10 +40,50 @@ class DashboardViewModel : ViewModel() {
             try {
                 val sessions = statsRepo.getSessionsByUserId(userId)
                 val sets = setRepo.getSetsByUserId(userId)
-                android.util.Log.d("DashboardVM", "Dashboard found ${sets.size} sets")
+                val allWords = vocabRepo.getAllWordsByUserId(userId)
                 
+                android.util.Log.d("DashboardVM", "REFRESHING: Found ${sets.size} sets and ${allWords.size} total words")
+                allWords.forEach { 
+                    if (it.repetitions > 0) {
+                        android.util.Log.d("DashboardVM", "WORD STATUS: ${it.word} | STATUS: ${it.status} | REPS: ${it.repetitions}")
+                    }
+                }
+                var userGoal = 10
+                val userDoc = db.collection("users").document(userId).get().await()
+                if (userDoc.exists()) {
+                    userGoal = userDoc.getLong("wordsPerDay")?.toInt() ?: 10
+                }
+
+                // Calculate Daily Progress
+                val calendar = Calendar.getInstance()
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfToday = calendar.timeInMillis
+                
+                val now = System.currentTimeMillis()
+
+                val newLearnedToday = allWords.count { 
+                    it.lastReviewed != null && 
+                    it.lastReviewed >= startOfToday && 
+                    it.repetitions == 1 
+                }
+                
+                val reviewedToday = allWords.count {
+                    it.lastReviewed != null &&
+                    it.lastReviewed >= startOfToday &&
+                    it.repetitions > 1
+                }
+
+                val dueToReview = allWords.count {
+                    it.repetitions > 0 && it.nextReview <= now
+                }
+                
+                val totalToReviewToday = reviewedToday + dueToReview
+
                 // Aggregate Stats
-                val totalWordsLearned = sets.sumOf { vocabRepo.getLearnedCountBySet(it.id) }
+                val totalWordsLearned = allWords.count { it.status == "Thuộc" }
                 val streak = calculateStreak(sessions)
                 val accuracy = calculateAccuracy(sessions)
                 
@@ -55,16 +95,21 @@ class DashboardViewModel : ViewModel() {
                 )
 
                 val deckRetentions = sets.map { set ->
+                    val setWords = allWords.filter { it.setId == set.id }
+                    val learnedInSet = setWords.count { it.status == "Thuộc" }
+                    val retention = if (setWords.isNotEmpty()) (learnedInSet * 100 / setWords.size) else 0
+                    
                     DeckRetention(
                         deckName = set.title,
-                        totalWords = vocabRepo.getWordCountBySet(set.id),
-                        retentionRate = set.progress,
+                        totalWords = setWords.size,
+                        retentionRate = retention,
                         tag = set.category
                     )
                 }
 
                 _dashboardData.value = DashboardData(
                     userStats = userStats,
+                    dailyPlan = "Học mới: $newLearnedToday/$userGoal\nÔn tập: $reviewedToday/$totalToReviewToday",
                     wordSets = deckRetentions
                 )
 

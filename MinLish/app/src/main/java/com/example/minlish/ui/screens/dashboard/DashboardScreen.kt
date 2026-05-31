@@ -53,22 +53,22 @@ fun DashboardScreen(
     val isFinished by learningViewModel.isFinished.collectAsState()
     LaunchedEffect(isFinished) {
         if (isFinished) {
+            android.util.Log.d("DashboardScreen", "SESSION FINISHED - TRIGGERING REFRESH")
             viewModel.refreshData()
             vocabViewModel.loadVocabularySets()
+            learningViewModel.loadRealDecks()
         }
     }
 
-    // Initial load
+    // Initial load and tab change load
     LaunchedEffect(selectedTab) {
-        if (selectedTab == 0) {
-            authViewModel.loadUserProfile()
-            viewModel.refreshData()
-        }
-        if (selectedTab == 1) {
-            vocabViewModel.loadVocabularySets()
-        }
-        if (selectedTab == 2) {
-            learningViewModel.loadRealDecks()
+        when (selectedTab) {
+            0 -> {
+                authViewModel.loadUserProfile()
+                viewModel.refreshData()
+            }
+            1 -> vocabViewModel.loadVocabularySets()
+            2 -> learningViewModel.loadRealDecks()
         }
     }
     
@@ -80,6 +80,7 @@ fun DashboardScreen(
     // Learning state
     val filteredDecks by learningViewModel.filteredDecks.collectAsState()
     val filterMode by learningViewModel.filterMode.collectAsState()
+    val totalToReview by learningViewModel.totalWordsToReview.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -164,6 +165,7 @@ fun DashboardScreen(
                 2 -> WordSetListContent(
                     decks = filteredDecks,
                     filterMode = filterMode,
+                    totalToReview = totalToReview,
                     onFilterChange = { learningViewModel.setFilterMode(it) }
                 ) { deckId, isReview ->
                     learningViewModel.startSession(deckId, isReview)

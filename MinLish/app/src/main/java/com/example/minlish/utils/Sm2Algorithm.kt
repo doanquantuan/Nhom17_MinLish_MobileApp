@@ -26,7 +26,8 @@ object Sm2Algorithm {
         } else if (q == 1) {
             i = 1
         } else {
-            n = 0
+            // Quality.AGAIN: reset progress but keep in Review cycle
+            n = 1
             i = 1
         }
 
@@ -50,7 +51,7 @@ object Sm2Algorithm {
             interval = i,
             nextReview = calendar.time,
             lastReviewed = Date(),
-            status = if (q < 2) WordStatus.REVIEW 
+            status = if (q < 2) WordStatus.REVIEW
                      else WordStatus.MASTERED
         )
     }

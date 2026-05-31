@@ -22,6 +22,26 @@ class VocabularyRepository (private val db: FirebaseFirestore) {
             .toObjects(Vocabulary::class.java)
     }
 
+    suspend fun getAllWordsByUserId(userId: String): List<Vocabulary> {
+        // SincesetId is related to sets owned by user, we might need a better way 
+        // but for now, we can fetch all vocabularies. 
+        // In a real app, vocabularies should probably have a userId field.
+        // Looking at current schema, it doesn't. 
+        // Let's check if we can get all words from all sets of the user.
+        val sets = db.collection("vocabulary_sets")
+            .whereEqualTo("userId", userId)
+            .get()
+            .await()
+            .toObjects(com.example.minlish.data.model.VocabularySet::class.java)
+            
+        val allWords = mutableListOf<Vocabulary>()
+        for (set in sets) {
+            val words = getWordsBySet(set.id)
+            allWords.addAll(words)
+        }
+        return allWords
+    }
+
     suspend fun updateWord(vocabulary: Vocabulary) {
         db.collection("vocabularies")
             .document(vocabulary.id)
@@ -58,12 +78,13 @@ class VocabularyRepository (private val db: FirebaseFirestore) {
 
     suspend fun getReviewCountBySet(setId: String): Int {
         return try {
+            val now = System.currentTimeMillis()
             val result = db.collection("vocabularies")
                 .whereEqualTo("setId", setId)
                 .get()
                 .await()
                 .toObjects(Vocabulary::class.java)
-            result.count { it.status != "Mới" }
+            result.count { (it.repetitions > 0) && (it.nextReview <= now) }
         } catch (e: Exception) {
             0
         }
@@ -73,7 +94,7 @@ class VocabularyRepository (private val db: FirebaseFirestore) {
         return try {
             val result = db.collection("vocabularies")
                 .whereEqualTo("setId", setId)
-                .whereEqualTo("status", "Mới")
+                .whereEqualTo("repetitions", 0)
                 .get()
                 .await()
             result.size()

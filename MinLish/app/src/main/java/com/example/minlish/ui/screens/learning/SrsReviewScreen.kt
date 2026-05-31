@@ -207,7 +207,10 @@ fun SrsReviewScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = onNavigateHome,
+                onClick = {
+                    viewModel.resetFinishedStatus()
+                    onNavigateHome()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -220,10 +223,10 @@ fun SrsReviewScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedButton(
-                onClick = onLearnAnother,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                onClick = {
+                    viewModel.resetFinishedStatus()
+                    onLearnAnother()
+                },
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray),
                 shape = RoundedCornerShape(12.dp)
             ) {

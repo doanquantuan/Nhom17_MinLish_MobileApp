@@ -29,10 +29,12 @@ fun WordSetListScreen(
 ) {
     val decks by viewModel.filteredDecks.collectAsState()
     val filterMode by viewModel.filterMode.collectAsState()
+    val totalToReview by viewModel.totalWordsToReview.collectAsState()
 
     WordSetListContent(
         decks = decks,
         filterMode = filterMode,
+        totalToReview = totalToReview,
         onFilterChange = { viewModel.setFilterMode(it) },
         onNavigateToFlashcard = onNavigateToFlashcard
     )
@@ -42,6 +44,7 @@ fun WordSetListScreen(
 fun WordSetListContent(
     decks: List<VocabDeck>,
     filterMode: DeckFilterMode,
+    totalToReview: Int,
     onFilterChange: (DeckFilterMode) -> Unit,
     onNavigateToFlashcard: (String, Boolean) -> Unit
 ) {
@@ -100,7 +103,7 @@ fun WordSetListContent(
         ) {
             item {
                 DailyPlanCard(
-                    reviewCount = 17, // Sample count
+                    reviewCount = totalToReview,
                     onReviewNow = { onNavigateToFlashcard("all", true) }
                 )
             }
@@ -186,14 +189,13 @@ fun DeckCard(deck: VocabDeck, onHocMoi: () -> Unit, onOnTap: () -> Unit) {
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
-                    val statusText = if (deck.wordsLearned > 0 || deck.wordsToReview > 0) {
-                        "${deck.wordsLearned} từ - Đã thuộc"
-                    } else {
-                        "Chưa học"
-                    }
+                    
+                    val progressPercent = if (deck.totalWords > 0) (deck.wordsLearned * 100 / deck.totalWords) else 0
+                    val statusText = "${deck.wordsLearned} từ - $progressPercent% thuộc"
+
                     Text(
                         statusText,
-                        color = if (deck.wordsLearned > 0) Color(0xFF4CAF50) else Color.Gray,
+                        color = if (deck.wordsLearned > 0 || deck.wordsToReview > 0) Color(0xFF4CAF50) else Color.Gray,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
