@@ -11,7 +11,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -32,15 +32,25 @@ class DashboardViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
+    init {
+        refreshData()
+    }
+
     fun refreshData() {
         val userId = auth.currentUser?.uid ?: return
         android.util.Log.d("DashboardVM", "Refreshing dashboard for user: $userId")
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val sessions = statsRepo.getSessionsByUserId(userId)
-                val sets = setRepo.getSetsByUserId(userId)
-                val allWords = vocabRepo.getAllWordsByUserId(userId)
+                val sessionsDeferred = async { statsRepo.getSessionsByUserId(userId) }
+                val setsDeferred = async { setRepo.getSetsByUserId(userId) }
+                val allWordsDeferred = async { vocabRepo.getAllWordsByUserId(userId) }
+                val userDocDeferred = async { db.collection("users").document(userId).get().await() }
+
+                val sessions = sessionsDeferred.await()
+                val sets = setsDeferred.await()
+                val allWords = allWordsDeferred.await()
+                val userDoc = userDocDeferred.await()
                 
                 android.util.Log.d("DashboardVM", "REFRESHING: Found ${sets.size} sets and ${allWords.size} total words")
                 allWords.forEach { 
@@ -49,7 +59,6 @@ class DashboardViewModel : ViewModel() {
                     }
                 }
                 var userGoal = 10
-                val userDoc = db.collection("users").document(userId).get().await()
                 if (userDoc.exists()) {
                     userGoal = userDoc.getLong("wordsPerDay")?.toInt() ?: 10
                 }
@@ -70,18 +79,10 @@ class DashboardViewModel : ViewModel() {
                     it.repetitions == 1 
                 }
                 
-                val reviewedToday = allWords.count {
-                    it.lastReviewed != null &&
-                    it.lastReviewed >= startOfToday &&
-                    it.repetitions > 1
-                }
-
                 val dueToReview = allWords.count {
                     it.repetitions > 0 && it.nextReview <= now
                 }
                 
-                val totalToReviewToday = reviewedToday + dueToReview
-
                 // Aggregate Stats
                 val totalWordsLearned = allWords.count { it.status == "Thuộc" }
                 val streak = calculateStreak(sessions)
@@ -109,7 +110,7 @@ class DashboardViewModel : ViewModel() {
 
                 _dashboardData.value = DashboardData(
                     userStats = userStats,
-                    dailyPlan = "Học mới: $newLearnedToday/$userGoal\nÔn tập: $reviewedToday/$totalToReviewToday",
+                    dailyPlan = "Học mới: $newLearnedToday/$userGoal\nÔn tập: $dueToReview",
                     wordSets = deckRetentions
                 )
 

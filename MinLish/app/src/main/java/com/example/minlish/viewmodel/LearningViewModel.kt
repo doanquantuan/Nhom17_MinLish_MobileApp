@@ -157,12 +157,11 @@ class LearningViewModel : ViewModel() {
                     )
                 }
                 _decks.value = vocabDecks
-                _totalWordsToReview.value = vocabDecks.sumOf { 
-                    // For the top card, only count truly DUE words
-                    val now = System.currentTimeMillis()
-                    sets.find { s -> s.id == it.id }?.let { s ->
-                        vocabRepo.getWordsBySet(s.id).count { w -> w.repetitions > 0 && w.nextReview <= now }
-                    } ?: 0
+                val now = System.currentTimeMillis()
+                _totalWordsToReview.value = sets.sumOf { set ->
+                    vocabRepo.getWordsBySet(set.id).count { w -> 
+                        w.repetitions > 0 && w.nextReview <= now 
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("LearningVM", "Error loading real decks", e)
@@ -199,10 +198,15 @@ class LearningViewModel : ViewModel() {
 
                 val now = System.currentTimeMillis()
                 val filteredWords = if (isReview) {
-                    // Review mode: all words that have been studied at least once,
-                    // but prioritized by those that are actually due.
-                    allWords.filter { it.repetitions > 0 }
-                        .sortedByDescending { it.nextReview <= now } // Due words first
+                    if (deckId == "all") {
+                        // Global "Ôn ngay": only words that are actually due.
+                        allWords.filter { it.repetitions > 0 && it.nextReview <= now }
+                            .sortedBy { it.nextReview } // Oldest reviews first
+                    } else {
+                        // Specific Deck "Ôn tập": allow early review of all studied words
+                        allWords.filter { it.repetitions > 0 }
+                            .sortedBy { it.nextReview } // Show due/overdue words first, then others
+                    }
                 } else {
                     // Learn New mode: words that are NEW
                     allWords.filter { it.repetitions == 0 }

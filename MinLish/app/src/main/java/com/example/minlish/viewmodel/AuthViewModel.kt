@@ -30,7 +30,10 @@ class AuthViewModel : ViewModel() {
     var isEditingName by mutableStateOf(false)
 
     init {
-        userEmail = authRepo.getCurrentUser()?.email ?: ""
+        val currentUser = authRepo.getCurrentUser()
+        userEmail = currentUser?.email ?: ""
+        userName = currentUser?.displayName ?: "Người dùng"
+        loadUserProfile()
     }
 
     // LOGIC ĐĂNG NHẬP EMAIL

@@ -58,132 +58,132 @@ fun FlashcardScreen(
         }
     } else if (currentIndex < words.size) {
         val currentWord = words[currentIndex]
-        var rotated by remember(currentIndex) { mutableStateOf(false) }
         
-        val rotation by animateFloatAsState(
-            targetValue = if (rotated) 180f else 0f,
-            animationSpec = tween(durationMillis = 500),
-            label = "CardRotation"
-        )
+        key(currentIndex) {
+            var rotated by remember { mutableStateOf(false) }
 
-        Scaffold(
-            topBar = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextGray)
+            val rotation by animateFloatAsState(
+                targetValue = if (rotated) 180f else 0f,
+                animationSpec = tween(durationMillis = 500),
+                label = "CardRotation"
+            )
+
+            Scaffold(
+                topBar = {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = TextGray)
+                        }
+                        Text(
+                            "${currentIndex + 1} / ${words.size} từ",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextGray
+                        )
+                        Spacer(modifier = Modifier.width(48.dp))
                     }
-                    Text(
-                        "${currentIndex + 1} / ${words.size} từ",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextGray
+                },
+                containerColor = PrimaryPurple
+            ) { padding ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
+                    SegmentedProgressIndicator(
+                        currentIndex = currentIndex,
+                        totalCount = words.size,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
                     )
-                    Spacer(modifier = Modifier.width(48.dp))
-                }
-            },
-            containerColor = PrimaryPurple
-        ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                LinearProgressIndicator(
-                    progress = { (currentIndex + 1).toFloat() / words.size },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .height(6.dp),
-                    color = Color.White.copy(alpha = 0.5f),
-                    trackColor = Color.White.copy(alpha = 0.2f),
-                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
-                )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(24.dp)
-                        .graphicsLayer {
-                            rotationY = rotation
-                            cameraDistance = 12f * density
-                        }
-                        .clickable { rotated = !rotated },
-                ) {
-                    if (rotation <= 90f) {
-                        Card(
-                            modifier = Modifier.fillMaxSize(),
-                            shape = RoundedCornerShape(32.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            elevation = CardDefaults.cardElevation(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                FlashcardFront(currentWord)
-                            }
-                        }
-                    } else {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer {
-                                    rotationY = 180f
-                                },
-                            shape = RoundedCornerShape(32.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            elevation = CardDefaults.cardElevation(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                FlashcardBack(currentWord)
-                            }
-                        }
-                    }
-                }
-
-                if (rotated) {
-                    SrsRatingSection(onRate = { quality ->
-                        viewModel.answerWord(quality)
-                    })
-                } else {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 32.dp),
-                        contentAlignment = Alignment.Center
+                            .weight(1f)
+                            .padding(24.dp)
+                            .graphicsLayer {
+                                rotationY = rotation
+                                cameraDistance = 12f * density
+                            }
+                            .clickable { rotated = !rotated },
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                "Bạn có nhớ từ này không?",
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Button(
-                                onClick = { rotated = true },
-                                modifier = Modifier
-                                    .fillMaxWidth(0.8f)
-                                    .height(56.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                                shape = RoundedCornerShape(16.dp)
+                        if (rotation <= 90f) {
+                            Card(
+                                modifier = Modifier.fillMaxSize(),
+                                shape = RoundedCornerShape(32.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                elevation = CardDefaults.cardElevation(8.dp)
                             ) {
-                                Text("Lật thẻ", color = PrimaryPurple, fontWeight = FontWeight.Bold)
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    FlashcardFront(currentWord)
+                                }
+                            }
+                        } else {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        rotationY = 180f
+                                    },
+                                shape = RoundedCornerShape(32.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                elevation = CardDefaults.cardElevation(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    FlashcardBack(currentWord)
+                                }
                             }
                         }
                     }
+
+                    if (rotated) {
+                        SrsRatingSection(onRate = { quality ->
+                            viewModel.answerWord(quality)
+                        })
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    "Bạn có nhớ từ này không?",
+                                    color = Color.White.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Button(
+                                    onClick = { rotated = true },
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.8f)
+                                        .height(56.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Text("Lật thẻ", color = PrimaryPurple, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
-                
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -252,10 +252,10 @@ fun SrsRatingSection(onRate: (Quality) -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            SrsButton(Quality.AGAIN, "<1m", AgainButtonColor, ErrorRed, onRate)
-            SrsButton(Quality.HARD, "1 ngày", HardButtonColor, AccentOrange, onRate)
-            SrsButton(Quality.GOOD, "3 ngày", GoodButtonColor, SuccessGreen, onRate)
-            SrsButton(Quality.EASY, "7 ngày", EasyButtonColor, PrimaryPurple, onRate)
+            SrsButton(Quality.AGAIN, AgainButtonColor, ErrorRed, onRate)
+            SrsButton(Quality.HARD, HardButtonColor, AccentOrange, onRate)
+            SrsButton(Quality.GOOD, GoodButtonColor, SuccessGreen, onRate)
+            SrsButton(Quality.EASY, EasyButtonColor, PrimaryPurple, onRate)
         }
     }
 }
@@ -263,7 +263,6 @@ fun SrsRatingSection(onRate: (Quality) -> Unit) {
 @Composable
 fun RowScope.SrsButton(
     quality: Quality,
-    interval: String,
     bgColor: Color,
     textColor: Color,
     onRate: (Quality) -> Unit
@@ -272,14 +271,42 @@ fun RowScope.SrsButton(
         onClick = { onRate(quality) },
         modifier = Modifier
             .weight(1f)
-            .height(64.dp),
+            .height(56.dp),
         colors = ButtonDefaults.buttonColors(containerColor = bgColor),
         shape = RoundedCornerShape(12.dp),
         contentPadding = PaddingValues(4.dp)
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(quality.name.lowercase().replaceFirstChar { it.uppercase() }, color = textColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(interval, color = textColor.copy(alpha = 0.7f), fontSize = 12.sp)
+        Text(
+            quality.name.lowercase().replaceFirstChar { it.uppercase() },
+            color = textColor,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp
+        )
+    }
+}
+
+@Composable
+fun SegmentedProgressIndicator(
+    currentIndex: Int,
+    totalCount: Int,
+    modifier: Modifier = Modifier,
+    activeColor: Color = Color.White,
+    inactiveColor: Color = Color(0xFFC0C0C0).copy(alpha = 0.4f) // Silver-ish
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        for (i in 0 until totalCount) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(6.dp)
+                    .background(
+                        color = if (i <= currentIndex) activeColor else inactiveColor,
+                        shape = RoundedCornerShape(3.dp)
+                    )
+            )
         }
     }
 }

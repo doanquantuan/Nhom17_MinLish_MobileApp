@@ -45,6 +45,7 @@ fun DashboardScreen(
     val primaryPurple = Color(0xFF534AB7)
     val dashboardData by viewModel.dashboardData.collectAsState()
     val statsData by viewModel.statsData.collectAsState()
+    val isDashboardLoading by viewModel.isLoading.collectAsState()
     
     // Auth state for name sync
     val userName = authViewModel.userName
@@ -64,7 +65,6 @@ fun DashboardScreen(
     LaunchedEffect(selectedTab) {
         when (selectedTab) {
             0 -> {
-                authViewModel.loadUserProfile()
                 viewModel.refreshData()
             }
             1 -> vocabViewModel.loadVocabularySets()
@@ -132,18 +132,29 @@ fun DashboardScreen(
                 .padding(innerPadding)
         ) {
             when (selectedTab) {
-                0 -> HomeContent(
-                    data = dashboardData, 
-                    primaryColor = primaryPurple, 
-                    displayName = userName,
-                    onStartLearning = {
-                        learningViewModel.startSession("all", true)
-                        navController.navigate("flashcard")
-                    },
-                    onNavigateToNotifications = {
-                        navController.navigate("notifications")
+                0 -> {
+                    if (isDashboardLoading && dashboardData.wordSets.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = primaryPurple)
+                        }
+                    } else {
+                        HomeContent(
+                            data = dashboardData,
+                            primaryColor = primaryPurple,
+                            displayName = userName,
+                            onStartLearning = {
+                                learningViewModel.startSession("all", false)
+                                navController.navigate("flashcard")
+                            },
+                            onNavigateToNotifications = {
+                                navController.navigate("notifications")
+                            }
+                        )
                     }
-                )
+                }
                 1 -> VocabularySetScreenContent(
                     vocabularySets = vocabularySets,
                     setWordCounts = setWordCounts,

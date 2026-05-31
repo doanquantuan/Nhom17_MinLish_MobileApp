@@ -4,7 +4,7 @@ data class UserStats(
     val wordsLearned: Int = 0,
     val streak: Int = 0,
     val accuracy: Int = 0,
-    val level: String = "A1-A2"
+    val level: String = "..."
 )
 
 data class DailyActivity(
@@ -21,7 +21,7 @@ data class DeckRetention(
 
 data class DashboardData(
     val userStats: UserStats = UserStats(),
-    val dailyPlan: String = "5 từ mới\n12 từ ôn",
+    val dailyPlan: String = "Đang tải dữ liệu...",
     val wordSets: List<DeckRetention> = emptyList()
 )
 
