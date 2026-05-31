@@ -49,6 +49,14 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
     val grayColor = Color(0xFF9E9E9E)
     val context = LocalContext.current
 
+    val gso = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken("67533858089-7rg7mp6gjcpi43rehogvj22g0dm4tu6i.apps.googleusercontent.com")
+            .requestEmail()
+            .build()
+    }
+    val googleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
+
     LaunchedEffect(authViewModel.toastMessage) {
         authViewModel.toastMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
@@ -79,6 +87,23 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
     }
 
     Column(modifier = Modifier.fillMaxSize().background(primaryPurple)) {
+        if (authViewModel.showVerificationDialog) {
+            AlertDialog(
+                onDismissRequest = { authViewModel.dismissVerificationDialog() },
+                title = { Text("Chưa xác thực email") },
+                text = { Text("Tài khoản của bạn chưa được xác thực. Bạn có muốn gửi lại email xác thực không?") },
+                confirmButton = {
+                    TextButton(onClick = { authViewModel.resendVerificationEmail() }) {
+                        Text("Gửi lại")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { authViewModel.dismissVerificationDialog() }) {
+                        Text("Hủy")
+                    }
+                }
+            )
+        }
         Column(
             modifier = Modifier.fillMaxWidth().weight(1.2f),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -163,11 +188,6 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
 
                 OutlinedButton(
                     onClick = {
-                        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                            .requestIdToken(context.getString(R.string.default_web_client_id))
-                            .requestEmail()
-                            .build()
-                        val googleSignInClient = GoogleSignIn.getClient(context, gso)
                         launcher.launch(googleSignInClient.signInIntent)
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),

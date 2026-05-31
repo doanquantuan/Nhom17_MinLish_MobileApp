@@ -43,4 +43,12 @@ class VocabularySetRepository (private val db: FirebaseFirestore) {
             .toObjects(VocabularySet::class.java)
             .sortedByDescending { it.createdAt }
     }
+
+    suspend fun getSetById(setId: String): VocabularySet? {
+        return db.collection("vocabulary_sets")
+            .document(setId)
+            .get()
+            .await()
+            .toObject(VocabularySet::class.java)
+    }
 }

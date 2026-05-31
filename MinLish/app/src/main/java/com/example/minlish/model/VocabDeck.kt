@@ -5,6 +5,7 @@ data class VocabDeck(
     val name: String = "",
     val totalWords: Int = 0,
     val wordsToReview: Int = 0,
+    val wordsLearned: Int = 0,
     val status: String = "", // e.g., "IELTS", "Business", "Travel"
     val colorHex: String = "#FFFFFF"
 )

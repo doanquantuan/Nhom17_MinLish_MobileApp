@@ -25,4 +25,8 @@ class AuthRepository {
     fun sendPasswordResetEmail(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         AuthManager.sendPasswordResetEmail(email, onSuccess, onError)
     }
+
+    fun sendVerificationEmail(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        AuthManager.sendVerificationEmail(onSuccess, onError)
+    }
 }

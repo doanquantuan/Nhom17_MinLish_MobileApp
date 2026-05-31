@@ -1,5 +1,7 @@
 package com.example.minlish.ui.screens.learning
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,14 +31,40 @@ fun FlashcardScreen(
 ) {
     val words by viewModel.currentSessionWords.collectAsState()
     val currentIndex by viewModel.currentIndex.collectAsState()
+    val isLoading by viewModel.isLoadingSession.collectAsState()
 
-    if (words.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = PrimaryPurple)
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize().background(PrimaryPurple), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Color.White)
+        }
+    } else if (words.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize().background(PrimaryPurple), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+                Text(
+                    "Hiện tại không có từ nào trong mục này.",
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = onBack,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Quay lại", color = PrimaryPurple)
+                }
+            }
         }
     } else if (currentIndex < words.size) {
         val currentWord = words[currentIndex]
-        var showMeaning by remember(currentIndex) { mutableStateOf(false) }
+        var rotated by remember(currentIndex) { mutableStateOf(false) }
+        
+        val rotation by animateFloatAsState(
+            targetValue = if (rotated) 180f else 0f,
+            animationSpec = tween(durationMillis = 500),
+            label = "CardRotation"
+        )
 
         Scaffold(
             topBar = {
@@ -77,31 +106,53 @@ fun FlashcardScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Card(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
                         .padding(24.dp)
-                        .clickable { showMeaning = true },
-                    shape = RoundedCornerShape(32.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(8.dp)
+                        .graphicsLayer {
+                            rotationY = rotation
+                            cameraDistance = 12f * density
+                        }
+                        .clickable { rotated = !rotated },
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (!showMeaning) {
-                            FlashcardFront(currentWord)
-                        } else {
-                            FlashcardBack(currentWord)
+                    if (rotation <= 90f) {
+                        Card(
+                            modifier = Modifier.fillMaxSize(),
+                            shape = RoundedCornerShape(32.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                FlashcardFront(currentWord)
+                            }
+                        }
+                    } else {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    rotationY = 180f
+                                },
+                            shape = RoundedCornerShape(32.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                FlashcardBack(currentWord)
+                            }
                         }
                     }
                 }
 
-                if (showMeaning) {
+                if (rotated) {
                     SrsRatingSection(onRate = { quality ->
                         viewModel.answerWord(quality)
                     })
@@ -119,7 +170,7 @@ fun FlashcardScreen(
                             )
                             Spacer(modifier = Modifier.height(24.dp))
                             Button(
-                                onClick = { showMeaning = true },
+                                onClick = { rotated = true },
                                 modifier = Modifier
                                     .fillMaxWidth(0.8f)
                                     .height(56.dp),
@@ -141,29 +192,23 @@ fun FlashcardScreen(
 @Composable
 fun FlashcardFront(word: VocabWord) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("TỪ MỚI", color = PrimaryPurple, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-        Spacer(modifier = Modifier.height(16.dp))
         Text(
             word.word,
             style = MaterialTheme.typography.displayMedium,
             color = PrimaryPurple,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
-        Text(word.phonetic, style = MaterialTheme.typography.titleLarge, color = TextGray)
-        Text(word.partOfSpeech, style = MaterialTheme.typography.bodyLarge, color = TextGray)
-        Spacer(modifier = Modifier.height(32.dp))
-        Text("Nhấn để xem nghĩa →", color = PrimaryPurple.copy(alpha = 0.6f))
     }
 }
 
 @Composable
 fun FlashcardBack(word: VocabWord) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(word.word, color = TextGray, style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
         Text(
             word.meaning,
             style = MaterialTheme.typography.headlineMedium,
@@ -171,24 +216,24 @@ fun FlashcardBack(word: VocabWord) {
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-        Text("${word.partOfSpeech} · ${word.phonetic}", color = TextGray)
         
         Spacer(modifier = Modifier.height(24.dp))
         
+        Text(
+            "Example:",
+            style = MaterialTheme.typography.titleMedium,
+            color = PrimaryPurple,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Start
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             word.example,
             style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = Color.DarkGray
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Text(
-            "Collocation: ${word.collocation}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = PrimaryPurple,
-            fontWeight = FontWeight.SemiBold
+            textAlign = TextAlign.Start,
+            color = Color.DarkGray,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }
@@ -208,9 +253,9 @@ fun SrsRatingSection(onRate: (Quality) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             SrsButton(Quality.AGAIN, "<1m", AgainButtonColor, ErrorRed, onRate)
-            SrsButton(Quality.HARD, "3m", HardButtonColor, AccentOrange, onRate)
-            SrsButton(Quality.GOOD, "10m", GoodButtonColor, SuccessGreen, onRate)
-            SrsButton(Quality.EASY, "4 ngày", EasyButtonColor, PrimaryPurple, onRate)
+            SrsButton(Quality.HARD, "1 ngày", HardButtonColor, AccentOrange, onRate)
+            SrsButton(Quality.GOOD, "3 ngày", GoodButtonColor, SuccessGreen, onRate)
+            SrsButton(Quality.EASY, "7 ngày", EasyButtonColor, PrimaryPurple, onRate)
         }
     }
 }

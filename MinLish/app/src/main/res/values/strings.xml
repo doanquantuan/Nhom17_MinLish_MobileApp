@@ -17,12 +17,6 @@
     <string name="collocation_label">Collocation</string>
     <string name="note_label">Ghi chú</string>
     <string name="save_vocabulary">Lưu từ vựng</string>
-    <string name="hint_word">ambiguous</string>
-    <string name="hint_pronunciation">/æmˈbɪɡjuəs/</string>
-    <string name="hint_meaning">mơ hồ, không rõ ràng, có thể hiểu theo nhiều nghĩa</string>
-    <string name="hint_example">The contract terms were ambiguous&#8230;</string>
-    <string name="hint_collocation">ambiguous statement · ambiguous role</string>
-    <string name="hint_note">Hay gặp trong Writing Task 2&#8230;</string>
     <string name="word_type_label">Loại từ</string>
     <string name="word_details">Chi tiết từ vựng</string>
     <string name="edit_vocabulary">Chỉnh sửa từ vựng</string>

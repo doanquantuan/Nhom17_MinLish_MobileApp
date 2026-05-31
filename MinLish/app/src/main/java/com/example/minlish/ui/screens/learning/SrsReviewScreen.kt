@@ -4,10 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +24,55 @@ fun SrsReviewScreen(
     onLearnAnother: () -> Unit
 ) {
     val stats by viewModel.sessionStats.collectAsState()
+    val currentStreak by viewModel.currentStreak.collectAsState()
+    var showDetails by remember { mutableStateOf(false) }
+
+    if (showDetails) {
+        AlertDialog(
+            onDismissRequest = { showDetails = false },
+            title = { Text("Chi tiết phiên học", fontWeight = FontWeight.Bold) },
+            text = {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(stats.wordResults) { result ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White, RoundedCornerShape(8.dp))
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(result.word, fontWeight = FontWeight.Medium)
+                            Text(
+                                result.speedStatus,
+                                color = when (result.speedStatus) {
+                                    "Dễ" -> PrimaryPurple
+                                    "Bình thường" -> SuccessGreen
+                                    "Khó" -> AccentOrange
+                                    "Quên" -> ErrorRed
+                                    else -> TextGray
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDetails = false }) {
+                    Text("Đóng")
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = BackgroundGray
+        )
+    }
 
     Scaffold(
         containerColor = BackgroundGray
@@ -99,38 +148,58 @@ fun SrsReviewScreen(
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    value = "${stats.timeMinutes}m",
+                    value = stats.timeDisplay,
                     label = "Thời gian",
                     color = TextGray,
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Card(
+                    onClick = { showDetails = true },
+                    modifier = Modifier.weight(1f).height(80.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = PrimaryPurple.copy(alpha = 0.1f))
                 ) {
-                    Text("🔥", fontSize = 24.sp)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            "Streak hiện tại",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFE65100)
-                        )
-                        Text(
-                            "8 ngày",
-                            style = MaterialTheme.typography.titleLarge,
+                            "Chi tiết",
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFE65100)
+                            color = PrimaryPurple
                         )
+                    }
+                }
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
+                    modifier = Modifier.weight(1f).height(80.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text("🔥", fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                "Streak",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFE65100)
+                            )
+                            Text(
+                                "$currentStreak ngày",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFE65100)
+                            )
+                        }
                     }
                 }
             }
@@ -138,7 +207,10 @@ fun SrsReviewScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = onNavigateHome,
+                onClick = {
+                    viewModel.resetFinishedStatus()
+                    onNavigateHome()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -151,10 +223,10 @@ fun SrsReviewScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedButton(
-                onClick = onLearnAnother,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                onClick = {
+                    viewModel.resetFinishedStatus()
+                    onLearnAnother()
+                },
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray),
                 shape = RoundedCornerShape(12.dp)
             ) {

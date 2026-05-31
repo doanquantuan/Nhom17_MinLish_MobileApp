@@ -15,12 +15,17 @@ object AuthManager {
     ) {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener {
-                auth.currentUser?.sendEmailVerification()
+                val user = auth.currentUser
+                android.util.Log.d("MinLishAuth", "User created: ${user?.email}, sending verification email...")
+                user?.sendEmailVerification()
                     ?.addOnCompleteListener { task ->
                         if (task.isSuccessful) {
+                            android.util.Log.d("MinLishAuth", "Verification email sent successfully to ${user.email}")
                             onSuccess()
                         } else {
-                            onError("Không thể gửi email xác thực: ${task.exception?.message}")
+                            val error = task.exception?.message ?: "Unknown error"
+                            android.util.Log.e("MinLishAuth", "Failed to send verification email: $error")
+                            onError("Không thể gửi email xác thực: $error")
                         }
                     }
             }
@@ -66,5 +71,21 @@ object AuthManager {
         auth.sendPasswordResetEmail(email)
             .addOnSuccessListener { onSuccess() }
             .addOnFailureListener { onError(it.message ?: "Gửi email khôi phục thất bại") }
+    }
+
+    fun sendVerificationEmail(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        val user = auth.currentUser
+        android.util.Log.d("MinLishAuth", "Attempting to resend verification email to: ${user?.email}")
+        user?.sendEmailVerification()
+            ?.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    android.util.Log.d("MinLishAuth", "Resend verification email success")
+                    onSuccess()
+                } else {
+                    val error = task.exception?.message ?: "Unknown error"
+                    android.util.Log.e("MinLishAuth", "Resend verification email failed: $error")
+                    onError(error)
+                }
+            }
     }
 }

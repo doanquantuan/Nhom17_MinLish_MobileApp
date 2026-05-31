@@ -19,6 +19,10 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -137,7 +141,8 @@ fun AddVocabularyScreen(
                     },
                     value = word,
                     onValueChange = { word = it },
-                    placeholder = stringResource(R.string.hint_word)
+                    placeholder = "",
+                    singleLine = true
                 )
 
                 Column {
@@ -186,7 +191,8 @@ fun AddVocabularyScreen(
                     label = buildAnnotatedString { append("Phát âm") },
                     value = pronunciation,
                     onValueChange = { pronunciation = it },
-                    placeholder = stringResource(R.string.hint_pronunciation),
+                    placeholder = "",
+                    singleLine = true,
                     trailingIcon = {
                         IconButton(onClick = { viewModel.speak(word) }) {
                             Icon(
@@ -205,7 +211,7 @@ fun AddVocabularyScreen(
                     },
                     value = meaning,
                     onValueChange = { meaning = it },
-                    placeholder = stringResource(R.string.hint_meaning),
+                    placeholder = "",
                     minLines = 3
                 )
 
@@ -213,7 +219,7 @@ fun AddVocabularyScreen(
                     label = buildAnnotatedString { append("Ví dụ") },
                     value = example,
                     onValueChange = { example = it },
-                    placeholder = stringResource(R.string.hint_example),
+                    placeholder = "",
                     minLines = 2
                 )
 
@@ -221,7 +227,7 @@ fun AddVocabularyScreen(
                     label = buildAnnotatedString { append("Collocation") },
                     value = collocation,
                     onValueChange = { collocation = it },
-                    placeholder = stringResource(R.string.hint_collocation),
+                    placeholder = "",
                     minLines = 2
                 )
 
@@ -229,7 +235,7 @@ fun AddVocabularyScreen(
                     label = buildAnnotatedString { append("Ghi chú") },
                     value = note,
                     onValueChange = { note = it },
-                    placeholder = stringResource(R.string.hint_note),
+                    placeholder = "",
                     minLines = 2
                 )
 
@@ -295,6 +301,7 @@ fun InputFieldLocal(
     placeholder: String,
     trailingIcon: @Composable (() -> Unit)? = null,
     minLines: Int = 1,
+    singleLine: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -319,7 +326,14 @@ fun InputFieldLocal(
                 focusedContainerColor = Color.White
             ),
             minLines = minLines,
-            maxLines = if (minLines > 1) 5 else 1
+            maxLines = if (singleLine) 1 else 5,
+            singleLine = singleLine,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Sentences,
+                autoCorrectEnabled = false,
+                keyboardType = KeyboardType.Text,
+                imeAction = if (singleLine) ImeAction.Next else ImeAction.Default
+            )
         )
     }
 }
