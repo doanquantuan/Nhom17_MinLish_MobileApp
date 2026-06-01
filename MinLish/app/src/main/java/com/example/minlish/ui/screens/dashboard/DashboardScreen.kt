@@ -1,6 +1,7 @@
 package com.example.minlish.ui.screens.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +48,7 @@ fun DashboardScreen(
     val dashboardData by viewModel.dashboardData.collectAsState()
     val statsData by viewModel.statsData.collectAsState()
     val isDashboardLoading by viewModel.isLoading.collectAsState()
+    val unreadCount by viewModel.unreadCount.collectAsState()
     
     // Auth state for name sync
     val userName = authViewModel.userName
@@ -151,7 +154,11 @@ fun DashboardScreen(
                             },
                             onNavigateToNotifications = {
                                 navController.navigate("notifications")
-                            }
+                            },
+                            onNavigateToDeck = { setId ->
+                                navController.navigate(Routes.VocabularyList.passSetId(setId))
+                            },
+                            unreadCount = unreadCount
                         )
                     }
                 }
@@ -195,7 +202,9 @@ fun HomeContent(
     primaryColor: Color, 
     displayName: String,
     onStartLearning: () -> Unit,
-    onNavigateToNotifications: () -> Unit
+    onNavigateToNotifications: () -> Unit,
+    onNavigateToDeck: (String) -> Unit = {},
+    unreadCount: Int = 0
 ) {
     LazyColumn(
         modifier = Modifier
@@ -214,11 +223,24 @@ fun HomeContent(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onNavigateToNotifications) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = primaryColor
-                        )
+                        BadgedBox(
+                            badge = {
+                                if (unreadCount > 0) {
+                                    Badge(
+                                        containerColor = Color.Red,
+                                        contentColor = Color.White
+                                    ) {
+                                        Text(text = if (unreadCount > 99) "99+" else unreadCount.toString())
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications",
+                                tint = primaryColor
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(
@@ -289,7 +311,8 @@ fun HomeContent(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = 6.dp)
+                    .clickable { onNavigateToDeck(deck.deckId) },
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 shape = RoundedCornerShape(12.dp)
@@ -341,16 +364,16 @@ fun StatisticsContent(data: com.example.minlish.model.StatisticsData, primaryCol
         }
 
         item {
-            Text(text = "Retention rate theo deck", fontFamily = BeVietnamPro, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(8.dp))
-            data.retentionRates.forEachIndexed { index, deck ->
-                val color = when(index % 3) {
-                    0 -> primaryColor
-                    1 -> Color(0xFF27AE60)
-                    else -> Color(0xFFF39C12)
-                }
-                RetentionRow(name = deck.deckName, rate = deck.retentionRate, color = color)
-            }
+            Text(text = "Phân bổ trình độ từ vựng", fontFamily = BeVietnamPro, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(16.dp))
+            WordDistributionChart(data.statusDistribution, primaryColor)
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+
+        item {
+            Text(text = "Thời điểm học tập tích cực", fontFamily = BeVietnamPro, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(16.dp))
+            TimeActivityChart(data.timeActivity, primaryColor)
             Spacer(modifier = Modifier.height(32.dp))
         }
 
@@ -367,10 +390,100 @@ fun StatisticsContent(data: com.example.minlish.model.StatisticsData, primaryCol
                     label = "THỜI GIAN HỌC", 
                     value = data.totalStudyTime, 
                     modifier = Modifier.weight(1f),
-                    backgroundColor = Color(0xFF27AE60).copy(alpha = 0.05f),
-                    valueColor = Color(0xFF27AE60)
+                    backgroundColor = Color(0xFF2980B9).copy(alpha = 0.05f),
+                    valueColor = Color(0xFF2980B9)
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun TimeActivityChart(data: List<com.example.minlish.model.TimeActivity>, primaryColor: Color) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp) // Tăng chiều cao để không bị che chữ
+            .padding(bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        val maxCount = data.maxOfOrNull { it.count } ?: 1
+        data.forEach { activity ->
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(maxOf(4.dp, (70.dp * (activity.count.toFloat() / maxCount))))
+                        .background(
+                            if (activity.count == maxCount && activity.count > 0) primaryColor 
+                            else primaryColor.copy(alpha = 0.3f),
+                            RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
+                        )
+                )
+                Spacer(modifier = Modifier.height(12.dp)) // Tăng khoảng cách giữa cột và chữ
+                Text(
+                    text = activity.period, 
+                    fontSize = 12.sp, 
+                    fontFamily = BeVietnamPro, 
+                    color = Color.Gray,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun WordDistributionChart(distribution: com.example.minlish.model.WordStatusDistribution, primaryColor: Color) {
+    val total = if (distribution.total > 0) distribution.total.toFloat() else 1f
+    
+    val masteredWeight = distribution.masteredCount / total
+    val reviewWeight = distribution.reviewCount / total
+    val newWeight = distribution.newCount / total
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Progress Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(24.dp)
+                .background(Color(0xFFF0F0F0), RoundedCornerShape(12.dp))
+        ) {
+            if (masteredWeight > 0) {
+                Box(modifier = Modifier.fillMaxHeight().weight(if (masteredWeight > 0) masteredWeight else 0.001f).background(Color(0xFF27AE60), RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)))
+            }
+            if (reviewWeight > 0) {
+                Box(modifier = Modifier.fillMaxHeight().weight(if (reviewWeight > 0) reviewWeight else 0.001f).background(Color(0xFFE67E22)))
+            }
+            if (newWeight > 0) {
+                Box(modifier = Modifier.fillMaxHeight().weight(if (newWeight > 0) newWeight else 0.001f).background(primaryColor, RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)))
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Legend
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            LegendItem("Đã thuộc", Color(0xFF27AE60), distribution.masteredCount)
+            LegendItem("Đang ôn", Color(0xFFE67E22), distribution.reviewCount)
+            LegendItem("Từ mới", primaryColor, distribution.newCount)
+        }
+    }
+}
+
+@Composable
+fun LegendItem(label: String, color: Color, count: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.size(10.dp).background(color, CircleShape))
+        Spacer(modifier = Modifier.width(6.dp))
+        Column {
+            Text(text = label, fontSize = 12.sp, fontFamily = BeVietnamPro, color = Color.Gray)
+            Text(text = count.toString(), fontSize = 14.sp, fontFamily = BeVietnamPro, fontWeight = FontWeight.Bold)
         }
     }
 }

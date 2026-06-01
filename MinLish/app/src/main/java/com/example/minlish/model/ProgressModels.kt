@@ -13,6 +13,7 @@ data class DailyActivity(
 )
 
 data class DeckRetention(
+    val deckId: String = "",
     val deckName: String,
     val totalWords: Int,
     val retentionRate: Int,
@@ -25,9 +26,32 @@ data class DashboardData(
     val wordSets: List<DeckRetention> = emptyList()
 )
 
+data class WordStatusDistribution(
+    val newCount: Int = 0,
+    val reviewCount: Int = 0,
+    val masteredCount: Int = 0,
+    val total: Int = 0
+)
+
+data class CategoryDistribution(
+    val category: String,
+    val wordCount: Int,
+    val percentage: Float,
+    val masteryRate: Int // % of mastered words in this category
+)
+
+data class TimeActivity(
+    val period: String, // "Sáng", "Trưa", "Chiều", "Tối"
+    val count: Int
+)
+
 data class StatisticsData(
     val weeklyActivity: List<DailyActivity> = emptyList(),
-    val retentionRates: List<DeckRetention> = emptyList(),
+    val timeActivity: List<TimeActivity> = emptyList(),
+    val categoryFocus: List<CategoryDistribution> = emptyList(),
+    val statusDistribution: WordStatusDistribution = WordStatusDistribution(),
     val totalSessions: Int = 0,
-    val totalStudyTime: String = "0h"
+    val totalStudyTime: String = "0h",
+    val averageAccuracy: Int = 0,
+    val currentStreak: Int = 0
 )

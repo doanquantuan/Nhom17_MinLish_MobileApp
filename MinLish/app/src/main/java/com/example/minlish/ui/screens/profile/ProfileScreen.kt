@@ -23,6 +23,7 @@ import com.example.minlish.ui.screens.auth.BeVietnamPro
 import com.example.minlish.viewmodel.AuthViewModel
 import com.example.minlish.viewmodel.VocabularyViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = viewModel(), vocabViewModel: VocabularyViewModel = viewModel()) {
     val primaryPurple = Color(0xFF534AB7)
@@ -43,7 +44,7 @@ fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = v
 
     // Gọi tải dữ liệu profile qua ViewModel khi mở màn hình
     LaunchedEffect(Unit) {
-        authViewModel.loadUserProfile()
+        authViewModel.loadUserProfile(context)
     }
 
     Column(modifier = Modifier.fillMaxSize().background(lightGrayBg)) {
@@ -93,26 +94,64 @@ fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = v
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { ProfileTag(text = authViewModel.userLevel) }
         }
 
-        // --- PHẦN 2: CÀI ĐẶT ---
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            Column {
-                Text(text = "Cài đặt học", color = Color.Gray, fontSize = 14.sp, fontFamily = BeVietnamPro, modifier = Modifier.padding(bottom = 8.dp))
+    // --- PHẦN 2: CÀI ĐẶT ---
+    var showTimePicker by remember { mutableStateOf(false) }
 
-                // FIX LỖI ELEVATION: Bỏ luôn chữ định danh, chỉ truyền số 2.dp
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
-                    Column {
-                        SettingRow(label = "Từ mới mỗi ngày", value = authViewModel.userWordsPerDay.toString())
-                        HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Column {
+            Text(text = "Cài đặt học", color = Color.Gray, fontSize = 14.sp, fontFamily = BeVietnamPro, modifier = Modifier.padding(bottom = 8.dp))
 
-                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(text = "Nhắc nhở hàng ngày", fontSize = 16.sp, fontFamily = BeVietnamPro, color = Color.DarkGray)
-                            Switch(checked = isReminderEnabled, onCheckedChange = { isReminderEnabled = it }, colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = primaryPurple))
-                        }
-                        HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
-                        SettingRow(label = "Giờ nhắc", value = "20:00")
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
+                Column {
+                    SettingRow(label = "Từ mới mỗi ngày", value = authViewModel.userWordsPerDay.toString())
+                    HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
+
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(text = "Nhắc nhở hàng ngày", fontSize = 16.sp, fontFamily = BeVietnamPro, color = Color.DarkGray)
+                        Switch(checked = isReminderEnabled, onCheckedChange = { isReminderEnabled = it }, colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = primaryPurple))
                     }
+                    HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
+                    SettingRow(
+                        label = "Giờ nhắc", 
+                        value = authViewModel.userReminderTime,
+                        onClick = { if (isReminderEnabled) showTimePicker = true }
+                    )
                 }
             }
+        }
+
+        if (showTimePicker) {
+            val currentTime = authViewModel.userReminderTime.split(":")
+            val initialHour = currentTime.getOrNull(0)?.toIntOrNull() ?: 20
+            val initialMinute = currentTime.getOrNull(1)?.toIntOrNull() ?: 0
+            val timePickerState = rememberTimePickerState(initialHour = initialHour, initialMinute = initialMinute)
+
+            AlertDialog(
+                onDismissRequest = { showTimePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val newTime = String.format("%02d:%02d", timePickerState.hour, timePickerState.minute)
+                        authViewModel.updateReminderTime(context, newTime)
+                        showTimePicker = false
+                    }) {
+                        Text("Xác nhận", color = primaryPurple, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showTimePicker = false }) {
+                        Text("Hủy", color = Color.Gray, fontFamily = BeVietnamPro)
+                    }
+                },
+                text = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Chọn giờ nhắc nhở", fontFamily = BeVietnamPro, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(bottom = 16.dp))
+                        TimePicker(state = timePickerState)
+                    }
+                },
+                containerColor = Color.White,
+                shape = RoundedCornerShape(16.dp)
+            )
+        }
 
             Column {
                 Text(text = "Dữ liệu", color = Color.Gray, fontSize = 14.sp, fontFamily = BeVietnamPro, modifier = Modifier.padding(bottom = 8.dp))
@@ -189,10 +228,11 @@ fun ProfileTag(text: String) {
 }
 
 @Composable
-fun SettingRow(label: String, value: String) {
+fun SettingRow(label: String, value: String, onClick: (() -> Unit)? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween

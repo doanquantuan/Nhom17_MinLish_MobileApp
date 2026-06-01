@@ -1,5 +1,6 @@
 package com.example.minlish.viewmodel
 
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -7,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.example.minlish.data.repository.AuthRepository
 import com.example.minlish.data.repository.UserRepository
+import com.example.minlish.utils.ReminderManager
 
 class AuthViewModel : ViewModel() {
     private val authRepo = AuthRepository()
@@ -27,6 +29,7 @@ class AuthViewModel : ViewModel() {
     var userEmail by mutableStateOf("")
     var userLevel by mutableStateOf("Đang tải...")
     var userWordsPerDay by mutableIntStateOf(0)
+    var userReminderTime by mutableStateOf("20:00")
     var isEditingName by mutableStateOf(false)
 
     init {
@@ -117,7 +120,7 @@ class AuthViewModel : ViewModel() {
     }
 
     // LOGIC TẢI DỮ LIỆU PROFILE
-    fun loadUserProfile() {
+    fun loadUserProfile(context: Context? = null) {
         val uid = authRepo.getCurrentUser()?.uid ?: return
         userEmail = authRepo.getCurrentUser()?.email ?: ""
         userRepo.getUserProfile(uid) { document ->
@@ -127,6 +130,13 @@ class AuthViewModel : ViewModel() {
                     userLevel = it.split(" ").firstOrNull() ?: it
                 }
                 document.getLong("wordsPerDay")?.let { userWordsPerDay = it.toInt() }
+                document.getString("reminderTime")?.let { 
+                    userReminderTime = it 
+                    // Tự động lập lịch khi tải profile xong
+                    context?.let { ctx ->
+                        ReminderManager.scheduleReminder(ctx, userReminderTime)
+                    }
+                }
             }
         }
     }
@@ -137,6 +147,16 @@ class AuthViewModel : ViewModel() {
         userRepo.updateUserName(uid, newName) {
             isEditingName = false
             userName = newName
+        }
+    }
+
+    // LOGIC ĐỔI GIỜ NHẮC NHỞ
+    fun updateReminderTime(context: Context, newTime: String) {
+        val uid = authRepo.getCurrentUser()?.uid ?: return
+        userRepo.updateReminderTime(uid, newTime) {
+            userReminderTime = newTime
+            // Cập nhật lại lịch nhắc nhở
+            ReminderManager.scheduleReminder(context, newTime)
         }
     }
 

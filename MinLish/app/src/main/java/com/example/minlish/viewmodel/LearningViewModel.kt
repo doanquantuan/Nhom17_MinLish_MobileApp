@@ -13,6 +13,8 @@ import com.example.minlish.model.VocabWord
 import com.example.minlish.utils.Sm2Algorithm
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.minlish.data.model.Notification
+import com.example.minlish.data.repository.NotificationRepository
 import java.util.Date
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +30,7 @@ class LearningViewModel : ViewModel() {
     private val statsRepo = StatsRepository(db)
     private val vocabRepo = VocabularyRepository(db)
     private val setRepo = VocabularySetRepository(db)
+    private val notificationRepo = NotificationRepository(db)
 
     private val _decks = MutableStateFlow<List<VocabDeck>>(emptyList())
     val decks: StateFlow<List<VocabDeck>> = _decks.asStateFlow()
@@ -355,6 +358,18 @@ class LearningViewModel : ViewModel() {
                     setRepo.updateSet(currentSet.copy(progress = progress))
                 }
             }
+
+            // Tự động tạo thông báo chúc mừng khi hoàn thành bài học
+            val notification = Notification(
+                userId = userId,
+                title = "Hoàn thành bài học!",
+                description = "Bạn đã hoàn thành ${stats.totalCards} từ vựng. Tuyệt vời!",
+                type = "streak",
+                timestamp = System.currentTimeMillis(),
+                isRead = false
+            )
+            notificationRepo.addNotification(notification)
+
             loadRealDecks()
         } catch (e: Exception) {
             android.util.Log.e("LearningVM", "Error saving session and updating progress", e)

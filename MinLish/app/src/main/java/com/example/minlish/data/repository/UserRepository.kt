@@ -38,4 +38,11 @@ class UserRepository {
             .set(mapOf("name" to newName), SetOptions.merge())
             .addOnSuccessListener { onSuccess() }
     }
+
+    // Cập nhật giờ nhắc nhở
+    fun updateReminderTime(userId: String, reminderTime: String, onSuccess: () -> Unit) {
+        db.collection("users").document(userId)
+            .set(mapOf("reminderTime" to reminderTime), SetOptions.merge())
+            .addOnSuccessListener { onSuccess() }
+    }
 }

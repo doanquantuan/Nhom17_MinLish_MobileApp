@@ -18,10 +18,28 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.minlish.ui.screens.auth.BeVietnamPro
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.minlish.data.model.Notification
+import com.example.minlish.viewmodel.NotificationViewModel
+import java.text.SimpleDateFormat
+import java.util.*
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationScreen(navController: NavController) {
+fun NotificationScreen(
+    navController: NavController,
+    viewModel: NotificationViewModel = viewModel()
+) {
     val primaryPurple = Color(0xFF534AB7)
+    val notifications by viewModel.notifications.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    val groupedNotifications = remember(notifications) {
+        groupNotifications(notifications)
+    }
 
     Scaffold(
         topBar = {
@@ -46,70 +64,95 @@ fun NotificationScreen(navController: NavController) {
                         )
                     }
                 },
-                // Add an empty action to help balance the centered title
                 actions = { Spacer(modifier = Modifier.size(48.dp)) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = primaryPurple)
             )
         },
         containerColor = Color.White
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp)
         ) {
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-                SectionHeader("Hôm nay")
-            }
-
-            item {
-                NotificationItem(
-                    title = "Đến giờ học rồi!",
-                    description = "Bạn có 5 từ mới và 12 từ cần ôn hôm nay.",
-                    time = "20:00",
-                    dotColor = Color(0xFF534AB7)
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = primaryPurple
                 )
-                HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
-            }
+            } else if (notifications.isEmpty()) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "Không có thông báo nào",
+                        fontFamily = BeVietnamPro,
+                        color = Color.Gray,
+                        fontSize = 16.sp
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp)
+                ) {
+                    groupedNotifications.forEach { (header, items) ->
+                        item {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            SectionHeader(header)
+                        }
 
-            item {
-                NotificationItem(
-                    title = "14 từ đến hạn ôn",
-                    description = "IELTS Academic có 14 từ sắp bị quên nếu không ôn hôm nay.",
-                    time = "09:00",
-                    dotColor = Color(0xFFE67E22)
-                )
-                HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(32.dp))
-                SectionHeader("Hôm qua")
-            }
-
-            item {
-                NotificationItem(
-                    title = "Streak 7 ngày!",
-                    description = "Tuyệt vời! Bạn đã học liên tục 7 ngày rồi.",
-                    time = "20:00",
-                    dotColor = Color(0xFF27AE60)
-                )
-                HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
-            }
-
-            item {
-                NotificationItem(
-                    title = "Nhắc học hàng ngày",
-                    description = "Đừng quên học từ vựng hôm nay nhé!",
-                    time = "20:00",
-                    dotColor = Color(0xFFD9D9D9)
-                )
-                HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+                        items(items) { notification ->
+                            NotificationItem(
+                                title = notification.title,
+                                description = notification.description,
+                                time = formatTimestamp(notification.timestamp),
+                                dotColor = getNotificationColor(notification.type),
+                                isRead = notification.isRead,
+                                onClick = { viewModel.markAsRead(notification.id) }
+                            )
+                            HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+                        }
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+                }
             }
         }
     }
+}
+
+private fun groupNotifications(notifications: List<Notification>): Map<String, List<Notification>> {
+    val calendar = Calendar.getInstance()
+    val today = calendar.apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val yesterday = today - 24 * 60 * 60 * 1000
+
+    return notifications.groupBy {
+        when {
+            it.timestamp >= today -> "Hôm nay"
+            it.timestamp >= yesterday -> "Hôm qua"
+            else -> "Cũ hơn"
+        }
+    }
+}
+
+private fun formatTimestamp(timestamp: Long): String {
+    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+    return sdf.format(Date(timestamp))
+}
+
+private fun getNotificationColor(type: String): Color {
+    // Luôn trả về màu xanh lá cho thông báo chưa đọc để khớp với yêu cầu user
+    return Color(0xFF27AE60)
 }
 
 @Composable
@@ -128,43 +171,51 @@ fun NotificationItem(
     title: String,
     description: String,
     time: String,
-    dotColor: Color
+    dotColor: Color,
+    isRead: Boolean = false,
+    onClick: () -> Unit = {}
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp),
-        verticalAlignment = Alignment.Top
+    Surface(
+        onClick = onClick,
+        color = Color.Transparent
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .padding(top = 4.dp, end = 16.dp)
-                .size(12.dp)
-                .background(dotColor, CircleShape)
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                fontFamily = BeVietnamPro,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 4.dp, end = 16.dp)
+                    .size(12.dp)
+                    .background(if (isRead) Color.Transparent else dotColor, CircleShape)
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = description,
-                fontFamily = BeVietnamPro,
-                fontSize = 14.sp,
-                color = Color.Gray,
-                lineHeight = 20.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = time,
-                fontFamily = BeVietnamPro,
-                fontSize = 12.sp,
-                color = Color.LightGray
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontFamily = BeVietnamPro,
+                    fontSize = 18.sp,
+                    fontWeight = if (isRead) FontWeight.Normal else FontWeight.Bold,
+                    color = Color.Black
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    fontFamily = BeVietnamPro,
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    lineHeight = 20.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = time,
+                    fontFamily = BeVietnamPro,
+                    fontSize = 12.sp,
+                    color = Color.LightGray
+                )
+            }
         }
     }
 }
+
