@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -39,18 +40,44 @@ fun AddVocabularyScreen(
     viewModel: VocabularyViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
-    val vocabularies by viewModel.vocabularies.collectAsState()
-    val existingVocab = remember(vocabularyId, vocabularies) {
-        vocabularies.find { it.id == vocabularyId }
+    val currentVocabulary by viewModel.currentVocabulary.collectAsState()
+
+    var word by remember { mutableStateOf("") }
+    var wordType by remember { mutableStateOf("Noun") }
+    var pronunciation by remember { mutableStateOf("") }
+    var meaning by remember { mutableStateOf("") }
+    var example by remember { mutableStateOf("") }
+    var collocation by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+
+    LaunchedEffect(vocabularyId) {
+        if (vocabularyId != null) {
+            viewModel.loadVocabularyById(vocabularyId)
+        } else {
+            viewModel.clearCurrentVocabulary()
+            word = ""
+            wordType = "Noun"
+            pronunciation = ""
+            meaning = ""
+            example = ""
+            collocation = ""
+            note = ""
+        }
     }
 
-    var word by remember { mutableStateOf(existingVocab?.word ?: "") }
-    var wordType by remember { mutableStateOf(existingVocab?.wordType ?: "Noun") }
-    var pronunciation by remember { mutableStateOf(existingVocab?.pronunciation ?: "") }
-    var meaning by remember { mutableStateOf(existingVocab?.meaning ?: "") }
-    var example by remember { mutableStateOf(existingVocab?.example ?: "") }
-    var collocation by remember { mutableStateOf(existingVocab?.collocation ?: "") }
-    var note by remember { mutableStateOf(existingVocab?.note ?: "") }
+    LaunchedEffect(currentVocabulary) {
+        currentVocabulary?.let { vocab ->
+            if (vocabularyId != null && vocab.id == vocabularyId) {
+                word = vocab.word
+                wordType = vocab.wordType
+                pronunciation = vocab.pronunciation
+                meaning = vocab.meaning
+                example = vocab.example
+                collocation = vocab.collocation
+                note = vocab.note
+            }
+        }
+    }
 
     val isLoading by viewModel.isLoading.collectAsState()
     val wordTypes = listOf("Noun", "Verb", "Adjective", "Adverb", "Preposition", "Conjunction", "Pronoun", "Interjection")
@@ -77,7 +104,7 @@ fun AddVocabularyScreen(
                 actions = {
                     TextButton(onClick = {
                         if (word.isNotBlank() && meaning.isNotBlank()) {
-                            val vocab = existingVocab?.copy(
+                            val vocab = currentVocabulary?.copy(
                                 word = word,
                                 wordType = wordType,
                                 pronunciation = pronunciation,
@@ -120,7 +147,7 @@ fun AddVocabularyScreen(
         },
         modifier = modifier
     ) { paddingValues ->
-        if (isLoading) {
+        if (isLoading && vocabularyId != null && currentVocabulary == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Color(0xFF5145B1))
             }
@@ -244,7 +271,7 @@ fun AddVocabularyScreen(
                 Button(
                     onClick = {
                         if (word.isNotBlank() && meaning.isNotBlank()) {
-                            val vocab = existingVocab?.copy(
+                            val vocab = currentVocabulary?.copy(
                                 word = word,
                                 wordType = wordType,
                                 pronunciation = pronunciation,
@@ -295,7 +322,7 @@ fun AddVocabularyScreen(
 
 @Composable
 fun InputFieldLocal(
-    label: CharSequence,
+    label: AnnotatedString,
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
@@ -306,7 +333,7 @@ fun InputFieldLocal(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = label.toString(),
+            text = label,
             fontSize = 18.sp,
             fontWeight = FontWeight.Medium,
             color = Color.Gray,

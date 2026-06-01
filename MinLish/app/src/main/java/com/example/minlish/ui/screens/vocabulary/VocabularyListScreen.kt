@@ -1,15 +1,23 @@
 package com.example.minlish.ui.screens.vocabulary
 
+import android.content.Intent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -23,6 +31,7 @@ import com.example.minlish.navigation.Routes
 import com.example.minlish.R
 import com.example.minlish.data.model.Vocabulary
 import com.example.minlish.ui.theme.MinLishTheme
+import com.example.minlish.viewmodel.CsvExporter
 import com.example.minlish.viewmodel.VocabularyViewModel
 
 @Composable
@@ -46,6 +55,28 @@ fun VocabularyListScreen(
     val review = vocabList.count { it.status == "Ôn lại" }
     val learned = vocabList.count { it.status == "Thuộc" }
 
+    val context = LocalContext.current
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            viewModel.importCsv(it, context, setId) { success, message ->
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        uri?.let {
+            viewModel.exportCsv(setId, it, context) { success, message ->
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     LaunchedEffect(setId) {
         viewModel.loadVocabularies(setId)
     }
@@ -54,7 +85,14 @@ fun VocabularyListScreen(
         topBar = {
             VocabularyHeader(
                 title = setTitle.ifEmpty { "Vocabulary List" },
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onExportClick = {
+                    val fileName = if (setTitle.isNotEmpty()) "${setTitle.replace(" ", "_")}.csv" else "vocab_export.csv"
+                    exportLauncher.launch(fileName)
+                },
+                onImportClick = {
+                    importLauncher.launch("text/*")
+                }
             )
         },
         modifier = modifier
@@ -133,10 +171,14 @@ fun VocabularyListScreen(
     }
 }
 
+
+
 @Composable
 fun VocabularyHeader(
     title: String,
     onBackClick: () -> Unit,
+    onExportClick: () -> Unit,
+    onImportClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -144,10 +186,11 @@ fun VocabularyHeader(
             .fillMaxWidth()
             .height(150.dp)
             .background(Color(0xFF5145B1))
-            .padding(start = 12.dp, end = 24.dp, bottom = 24.dp),
+            .padding(start = 12.dp, end = 12.dp, bottom = 24.dp),
         contentAlignment = Alignment.BottomStart
     ) {
         Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
@@ -167,8 +210,31 @@ fun VocabularyHeader(
                 color = Color.White,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
-                lineHeight = 38.sp
+                lineHeight = 38.sp,
+                modifier = Modifier.weight(1f)
             )
+            IconButton(
+                onClick = onImportClick,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FileDownload,
+                    contentDescription = "Import CSV",
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            IconButton(
+                onClick = onExportClick,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FileUpload,
+                    contentDescription = "Export CSV",
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
         }
     }
 }

@@ -100,6 +100,10 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    fun clearCurrentVocabulary() {
+        _currentVocabulary.value = null
+    }
+
     fun loadVocabularySets() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -230,16 +234,35 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun importCsv(uri: android.net.Uri, context: android.content.Context, onComplete: (Boolean, String) -> Unit) {
+    private fun cleanCsvField(value: String): String {
+        return value
+            .replace("\r", " ")
+            .replace("\n", " ")
+            .trim()
+    }
+
+    fun importCsv(
+        uri: android.net.Uri,
+        context: android.content.Context,
+        targetSetId: String? = null,
+        onComplete: (Boolean, String) -> Unit
+    ) {
         viewModelScope.launch {
             _isLoading.value = true
-            try {
-                // 1. Mở và đọc file CSV từ thiết bị
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val reader = java.io.BufferedReader(java.io.InputStreamReader(inputStream))
 
-                // Đọc tất cả các dòng, bỏ qua dòng đầu tiên (dòng tiêu đề Header)
-                val lines = reader.readLines().drop(1)
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                    ?: throw Exception("Không thể mở file CSV")
+
+                val reader = java.io.BufferedReader(
+                    java.io.InputStreamReader(inputStream, Charsets.UTF_8)
+                )
+
+                val lines = reader.lineSequence()
+                    .drop(1)
+                    .filter { it.isNotBlank() }
+                    .toList()
+
                 reader.close()
 
                 if (lines.isEmpty()) {
@@ -248,68 +271,236 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
                     return@launch
                 }
 
-                // 2. Tạo một Bộ từ (Set) mới để chứa các từ import này
-                val userId = auth.currentUser?.uid ?: ""
                 val db = FirebaseFirestore.getInstance()
+                val finalSetId: String
 
-                // Xin Firestore một ID mới ngẫu nhiên cho Bộ từ
-                val setDoc = db.collection("vocabulary_sets").document()
-                val setId = setDoc.id
+                if (targetSetId == null) {
 
-                val currentDate = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
-                val newSet = VocabularySet(
-                    id = setId,
-                    userId = userId,
-                    title = "Imported CSV ($currentDate)",
-                    description = "Dữ liệu được import tự động từ file CSV",
-                    category = "Tất cả"
-                )
-                // Lưu Bộ từ mới lên Firestore
-                setDoc.set(newSet).await()
+                    val userId = auth.currentUser?.uid ?: ""
 
-                // 3. Phân tích từng dòng CSV và lưu thành Từ vựng (ĐÃ CẬP NHẬT FULL 7 TRƯỜNG)
+                    val setDoc =
+                        db.collection("vocabulary_sets").document()
+
+                    finalSetId = setDoc.id
+
+                    val currentDate =
+                        SimpleDateFormat(
+                            "dd/MM/yyyy HH:mm",
+                            Locale.getDefault()
+                        ).format(Date())
+
+                    val newSet = VocabularySet(
+                        id = finalSetId,
+                        userId = userId,
+                        title = "Imported CSV ($currentDate)",
+                        description = "Dữ liệu được import tự động từ file CSV",
+                        category = "Tất cả"
+                    )
+
+                    setDoc.set(newSet).await()
+
+                } else {
+                    finalSetId = targetSetId
+                }
+
                 var successCount = 0
-                for (line in lines) {
-                    // Thêm tham số limit = -1 để hệ thống không bỏ qua các cột trống ở cuối file
-                    val columns = line.split(",")
 
-                    // Kiểm tra xem cột đầu tiên (Từ vựng) có chữ không
-                    if (columns.isNotEmpty() && columns[0].isNotBlank()) {
-                        val word = columns[0].trim()
-                        val meaning = if (columns.size > 1) columns[1].trim() else ""
-                        val wordType = if (columns.size > 2) columns[2].trim() else ""
-                        val pronunciation = if (columns.size > 3) columns[3].trim() else ""
-                        val example = if (columns.size > 4) columns[4].trim() else ""
-                        val collocation = if (columns.size > 5) columns[5].trim() else ""
-                        val note = if (columns.size > 6) columns[6].trim() else ""
+                for (line in lines) {
+
+                    val columns =
+                        line.split(
+                            ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()
+                        ).map {
+                            it.trim()
+                                .removePrefix("\"")
+                                .removeSuffix("\"")
+                                .replace("\"\"", "\"")
+                        }
+
+                    if (columns.isNotEmpty() &&
+                        columns[0].isNotBlank()
+                    ) {
 
                         val newVocab = Vocabulary(
-                            setId = setId,
-                            word = word,
-                            meaning = meaning,
-                            wordType = wordType,
-                            pronunciation = pronunciation,
-                            example = example,
-                            collocation = collocation,
-                            note = note
+                            setId = finalSetId,
+
+                            word = cleanCsvField(
+                                columns.getOrElse(0) { "" }
+                            ),
+
+                            meaning = cleanCsvField(
+                                columns.getOrElse(1) { "" }
+                            ),
+
+                            wordType = cleanCsvField(
+                                columns.getOrElse(2) { "" }
+                            ),
+
+                            pronunciation = cleanCsvField(
+                                columns.getOrElse(3) { "" }
+                            ),
+
+                            description = cleanCsvField(
+                                columns.getOrElse(4) { "" }
+                            ),
+
+                            example = cleanCsvField(
+                                columns.getOrElse(5) { "" }
+                            ),
+
+                            collocation = cleanCsvField(
+                                columns.getOrElse(6) { "" }
+                            ),
+
+                            note = cleanCsvField(
+                                columns.getOrElse(7) { "" }
+                            )
                         )
 
-                        // Gọi Repository để lưu từ vựng lên Firebase
                         vocabularyRepository.addWord(newVocab)
                         successCount++
                     }
                 }
 
-                // Load lại danh sách Bộ từ để giao diện cập nhật
-                loadVocabularySets()
+                if (targetSetId == null) {
+                    loadVocabularySets()
+                } else {
+                    loadVocabularies(targetSetId)
+                }
 
                 _isLoading.value = false
-                onComplete(true, "Tuyệt vời! Đã import thành công $successCount từ vựng.")
+
+                onComplete(
+                    true,
+                    "Tuyệt vời! Đã import thành công $successCount từ vựng."
+                )
 
             } catch (e: Exception) {
+
                 _isLoading.value = false
-                android.util.Log.e("MinLishError", "Lỗi Import CSV", e)
-                onComplete(false, "Lỗi import: Vui lòng kiểm tra lại định dạng file CSV.")
+
+                android.util.Log.e(
+                    "MinLishError",
+                    "Lỗi Import CSV",
+                    e
+                )
+
+                onComplete(
+                    false,
+                    "Lỗi import: Vui lòng kiểm tra lại định dạng file CSV."
+                )
+            }
+        }
+    }
+
+    fun exportCsv(
+        setId: String,
+        uri: android.net.Uri,
+        context: android.content.Context,
+        onComplete: (Boolean, String) -> Unit
+    ) {
+        viewModelScope.launch {
+
+            _isLoading.value = true
+
+            try {
+
+                val vocabList =
+                    vocabularyRepository.getWordsBySet(setId)
+
+                val setInfo =
+                    _vocabularySets.value.find {
+                        it.id == setId
+                    }
+
+                val title =
+                    setInfo?.title ?: "Vocabulary_Export"
+
+                if (vocabList.isEmpty()) {
+
+                    _isLoading.value = false
+
+                    onComplete(
+                        false,
+                        "Bộ từ này đang trống, không có gì để export!"
+                    )
+
+                    return@launch
+                }
+
+                val csvContent = StringBuilder()
+
+                csvContent.append(
+                    "Word,Meaning,Type,Pronunciation,Description,Example,Collocation,Note\n"
+                )
+
+                for (v in vocabList) {
+
+                    val row = listOf(
+                        v.word,
+                        v.meaning,
+                        v.wordType,
+                        v.pronunciation,
+                        v.description,
+                        v.example,
+                        v.collocation,
+                        v.note
+                    ).joinToString(",") { field ->
+
+                        val cleanField =
+                            cleanCsvField(field)
+
+                        "\"${cleanField.replace("\"", "\"\"")}\""
+                    }
+
+                    csvContent
+                        .append(row)
+                        .append("\n")
+                }
+
+                val outputStream =
+                    context.contentResolver.openOutputStream(uri)
+                        ?: throw Exception("Không thể tạo file CSV")
+
+                outputStream.use {
+
+                    it.write(
+                        byteArrayOf(
+                            0xEF.toByte(),
+                            0xBB.toByte(),
+                            0xBF.toByte()
+                        )
+                    )
+
+                    it.write(
+                        csvContent.toString()
+                            .toByteArray(Charsets.UTF_8)
+                    )
+
+                    it.flush()
+                }
+
+                _isLoading.value = false
+
+                onComplete(
+                    true,
+                    "Đã export thành công bộ từ '$title'!"
+                )
+
+            } catch (e: Exception) {
+
+                _isLoading.value = false
+
+                android.util.Log.e(
+                    "MinLishError",
+                    "Lỗi Export CSV",
+                    e
+                )
+
+                onComplete(
+                    false,
+                    "Lỗi export: ${e.localizedMessage}"
+                )
             }
         }
     }
