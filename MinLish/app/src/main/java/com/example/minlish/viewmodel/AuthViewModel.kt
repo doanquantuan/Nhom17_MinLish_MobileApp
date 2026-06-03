@@ -9,6 +9,10 @@ import androidx.lifecycle.ViewModel
 import com.example.minlish.data.repository.AuthRepository
 import com.example.minlish.data.repository.UserRepository
 import com.example.minlish.utils.ReminderManager
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import com.google.firebase.firestore.FirebaseFirestore
 
 class AuthViewModel : ViewModel() {
     private val authRepo = AuthRepository()
@@ -39,6 +43,34 @@ class AuthViewModel : ViewModel() {
         loadUserProfile()
     }
 
+    private fun translateAuthError(errorMsg: String): String {
+        val lowerCaseError = errorMsg.lowercase()
+        return when {
+            lowerCaseError.contains("invalid_login_credentials") ||
+                    lowerCaseError.contains("invalid credential") ||
+                    lowerCaseError.contains("credential is incorrect") ||
+                    lowerCaseError.contains("wrong password") ->
+                "Email hoặc mật khẩu không chính xác!"
+            lowerCaseError.contains("badly formatted") || lowerCaseError.contains("invalid_email") ->
+                "Định dạng email không hợp lệ!"
+            lowerCaseError.contains("already in use") || lowerCaseError.contains("email_already_in_use") ->
+                "Email này đã được đăng ký cho một tài khoản khác!"
+            lowerCaseError.contains("at least 6") || lowerCaseError.contains("password is invalid") ->
+                "Mật khẩu quá yếu (cần ít nhất 6 ký tự)."
+            lowerCaseError.contains("user not found") || lowerCaseError.contains("user_not_found") ->
+                "Tài khoản không tồn tại!"
+            lowerCaseError.contains("network error") || lowerCaseError.contains("network_error") ->
+                "Lỗi mạng! Vui lòng kiểm tra kết nối Internet."
+            lowerCaseError.contains("too many requests") || lowerCaseError.contains("too_many_requests") ->
+                "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau!"
+            lowerCaseError.contains("blocked") || lowerCaseError.contains("disabled") ->
+                "Tài khoản này đã bị khóa."
+            lowerCaseError.contains("requires recent authentication") ->
+                "Vì lý do bảo mật, vui lòng Đăng xuất rồi Đăng nhập lại để thực hiện!"
+            else -> "Thao tác thất bại: $errorMsg"
+        }
+    }
+
     // LOGIC ĐĂNG NHẬP EMAIL
     fun login(email: String, pass: String) {
         if (email.isBlank() || pass.isBlank()) {
@@ -50,6 +82,7 @@ class AuthViewModel : ViewModel() {
             onSuccess = {
                 val user = authRepo.getCurrentUser()
                 if (user != null && user.isEmailVerified) {
+                    toastMessage = "Đăng nhập thành công!"
                     checkUserOnboarding(user.uid)
                 } else {
                     isLoading = false
@@ -58,7 +91,7 @@ class AuthViewModel : ViewModel() {
             },
             onError = {
                 isLoading = false
-                toastMessage = it
+                toastMessage = translateAuthError(it)
             }
         )
     }
@@ -69,11 +102,15 @@ class AuthViewModel : ViewModel() {
         authRepo.loginWithGoogle(idToken,
             onSuccess = {
                 val user = authRepo.getCurrentUser()
-                if (user != null) checkUserOnboarding(user.uid)
+                if (user != null)
+                {
+                    toastMessage = "Đăng nhập thành công!"
+                    checkUserOnboarding(user.uid)
+                }
             },
             onError = {
                 isLoading = false
-                toastMessage = it
+                toastMessage = translateAuthError(it)
             }
         )
     }
@@ -98,7 +135,7 @@ class AuthViewModel : ViewModel() {
             },
             onError = {
                 isLoading = false
-                toastMessage = it
+                toastMessage = translateAuthError(it)
             }
         )
     }
@@ -114,7 +151,7 @@ class AuthViewModel : ViewModel() {
             },
             onError = {
                 isLoading = false
-                toastMessage = it
+                toastMessage = translateAuthError(it)
             }
         )
     }
@@ -174,7 +211,7 @@ class AuthViewModel : ViewModel() {
             },
             onError = {
                 isLoading = false
-                toastMessage = it
+                toastMessage = translateAuthError(it)
             }
         )
     }
@@ -210,8 +247,72 @@ class AuthViewModel : ViewModel() {
             },
             onError = {
                 isLoading = false
-                toastMessage = it
+                toastMessage = translateAuthError(it)
             }
         )
+    }
+
+    fun updateWordsPerDay(newWords: Int) {
+        val uid = authRepo.getCurrentUser()?.uid ?: return
+        FirebaseFirestore.getInstance().collection("users").document(uid)
+            .update("wordsPerDay", newWords)
+            .addOnSuccessListener {
+                userWordsPerDay = newWords // Cập nhật lại giao diện ngay lập tức
+            }
+    }
+
+    fun deleteAccount(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        val user = authRepo.getCurrentUser()
+        val uid = user?.uid
+        if (user == null || uid == null) {
+            onError("Không tìm thấy tài khoản để xóa.")
+            return
+        }
+
+        // --- BƯỚC CHẶN THÔNG MINH: KIỂM TRA THỜI GIAN ĐĂNG NHẬP GẦN NHẤT ---
+        // Firebase Auth lưu lại khoảnh khắc bạn đăng nhập bằng biến lastSignInTimestamp
+        val lastSignInTime = user.metadata?.lastSignInTimestamp ?: 0L
+        val currentTime = System.currentTimeMillis()
+
+        // Tính ra số phút chênh lệch
+        val timeDiffMinutes = (currentTime - lastSignInTime) / (1000 * 60)
+
+        // Nếu đã trôi qua quá 4 phút (Lấy mốc an toàn dưới 5 phút của Firebase)
+        if (timeDiffMinutes >= 4) {
+            // Chặn đứng ngay lập tức, văng lỗi ra màn hình và kết thúc hàm
+            // Firestore lúc này được bảo vệ an toàn 100%
+            onError("Vì lý do bảo mật, vui lòng Đăng xuất rồi Đăng nhập lại để thực hiện!")
+            return
+        }
+
+        // Nếu thời gian hợp lệ (< 4 phút), tiến hành dọn rác như bình thường
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                val db = FirebaseFirestore.getInstance()
+
+                // 1. Quét và xóa tất cả Bộ từ và Từ vựng của user này
+                val setsSnapshot = db.collection("vocabulary_sets").whereEqualTo("userId", uid).get().await()
+                for (setDoc in setsSnapshot.documents) {
+                    val wordsSnapshot = db.collection("vocabularies").whereEqualTo("setId", setDoc.id).get().await()
+                    for (wordDoc in wordsSnapshot.documents) {
+                        db.collection("vocabularies").document(wordDoc.id).delete().await()
+                    }
+                    db.collection("vocabulary_sets").document(setDoc.id).delete().await()
+                }
+
+                // 2. Xóa Profile của user
+                db.collection("users").document(uid).delete().await()
+
+                // 3. Tiêu hủy tài khoản Auth
+                user.delete().await()
+
+                isLoading = false
+                onSuccess()
+            } catch (e: Exception) {
+                isLoading = false
+                onError(translateAuthError(e.message ?: "Lỗi không xác định"))
+            }
+        }
     }
 }

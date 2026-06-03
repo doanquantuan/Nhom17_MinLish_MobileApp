@@ -21,26 +21,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.minlish.ui.screens.auth.BeVietnamPro
 import com.example.minlish.viewmodel.AuthViewModel
-import com.example.minlish.viewmodel.VocabularyViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = viewModel(), vocabViewModel: VocabularyViewModel = viewModel()) {
+fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = viewModel()) {
     val primaryPurple = Color(0xFF534AB7)
     val lightGrayBg = Color(0xFFF5F5F5)
     var isReminderEnabled by remember { mutableStateOf(true) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
-    val csvPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) {
-            vocabViewModel.importCsv(uri, context) { _, message ->
-                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
-            }
-        }
-    }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var showWordsDialog by remember { mutableStateOf(false) }
+    var wordsInput by remember { mutableStateOf("") }
 
     // Gọi tải dữ liệu profile qua ViewModel khi mở màn hình
     LaunchedEffect(Unit) {
@@ -95,15 +89,20 @@ fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = v
         }
 
     // --- PHẦN 2: CÀI ĐẶT ---
-    var showTimePicker by remember { mutableStateOf(false) }
-
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Column {
             Text(text = "Cài đặt học", color = Color.Gray, fontSize = 14.sp, fontFamily = BeVietnamPro, modifier = Modifier.padding(bottom = 8.dp))
 
             Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
                 Column {
-                    SettingRow(label = "Từ mới mỗi ngày", value = authViewModel.userWordsPerDay.toString())
+                    SettingRow(
+                        label = "Từ mới mỗi ngày",
+                        value = authViewModel.userWordsPerDay.toString(),
+                        onClick = {
+                            wordsInput = authViewModel.userWordsPerDay.toString()
+                            showWordsDialog = true
+                        }
+                    )
                     HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
 
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -152,39 +151,24 @@ fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = v
                 shape = RoundedCornerShape(16.dp)
             )
         }
+        Column {
+            Text(text = "Quản lý tài khoản", color = Color.Gray, fontSize = 14.sp, fontFamily = BeVietnamPro, modifier = Modifier.padding(bottom = 8.dp))
 
-            Column {
-                Text(text = "Dữ liệu", color = Color.Gray, fontSize = 14.sp, fontFamily = BeVietnamPro, modifier = Modifier.padding(bottom = 8.dp))
-
-                Button(
-                    onClick = { csvPickerLauncher.launch("*/*") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    // FIX LỖI ELEVATION: Truyền số 2.dp trực tiếp
-                    elevation = ButtonDefaults.buttonElevation(2.dp)
-                ) {
-                    Text(text = $$"Import CSV", color = Color.Black, fontSize = 16.sp, fontFamily = BeVietnamPro, fontWeight = FontWeight.Medium)
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Lưu ý: Chỉ hỗ trợ định dạng file .csv\nThứ tự các cột: Từ vựng, Nghĩa, Loại từ, Phát âm, Ví dụ, Collocation, Ghi chú",
-                    color = Color.Gray,
-                    fontSize = 12.sp,
-                    fontFamily = BeVietnamPro,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                    lineHeight = 18.sp // Tăng khoảng cách dòng cho dễ đọc
-                )
+            Button(
+                onClick = { showLogoutDialog = true },
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE8E7F5)),
+                elevation = ButtonDefaults.buttonElevation(0.dp)
+            ) {
+                Text(text = "Đăng xuất", color = primaryPurple, fontSize = 16.sp, fontFamily = BeVietnamPro, fontWeight = FontWeight.Medium)
             }
+        }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            TextButton(onClick = { showLogoutDialog = true }, modifier = Modifier.fillMaxWidth()) {
-                Text(text = "Đăng xuất", color = Color(0xFFD32F2F), fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro, textAlign = TextAlign.Center)
+            TextButton(onClick = { showDeleteDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(text = "Xóa vĩnh viễn tài khoản", color = Color(0xFFD32F2F), fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro, textAlign = TextAlign.Center)
             }
         }
     }
@@ -205,6 +189,76 @@ fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = v
                 ) { Text("Đăng xuất", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro) }
             },
             dismissButton = { TextButton(onClick = { showLogoutDialog = false }) { Text("Hủy", color = Color.Gray, fontFamily = BeVietnamPro) } },
+            containerColor = Color.White, shape = RoundedCornerShape(16.dp)
+        )
+    }
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(text = "Xóa tài khoản", fontFamily = BeVietnamPro, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F)) },
+            text = { Text(text = "Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản này không? Toàn bộ dữ liệu học tập, từ vựng và hồ sơ sẽ bị dọn sạch và KHÔNG THỂ khôi phục.", fontFamily = BeVietnamPro) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        authViewModel.deleteAccount(
+                            onSuccess = {
+                                android.widget.Toast.makeText(context, "Đã xóa tài khoản thành công!", android.widget.Toast.LENGTH_SHORT).show()
+                                navController.navigate("login") { popUpTo(0) { inclusive = true } }
+                            },
+                            onError = { error ->
+                                android.widget.Toast.makeText(context, error, android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    }
+                ) { Text("Xóa vĩnh viễn", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro) }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Hủy", color = Color.Gray, fontFamily = BeVietnamPro) } },
+            containerColor = Color.White, shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    if (showWordsDialog) {
+        AlertDialog(
+            onDismissRequest = { showWordsDialog = false },
+            title = { Text(text = "Mục tiêu học tập", fontFamily = BeVietnamPro, fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = wordsInput,
+                    onValueChange = { newValue ->
+                        // Chỉ cho phép nhập số
+                        if (newValue.all { it.isDigit() }) {
+                            wordsInput = newValue
+                        }
+                    },
+                    label = { Text("Số từ mới mỗi ngày", fontFamily = BeVietnamPro) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = primaryPurple,
+                        focusedLabelColor = primaryPurple
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val newWords = wordsInput.toIntOrNull() ?: 0
+                        if (newWords > 0) {
+                            authViewModel.updateWordsPerDay(newWords)
+                            showWordsDialog = false
+                            android.widget.Toast.makeText(context, "Đã cập nhật mục tiêu!", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            android.widget.Toast.makeText(context, "Vui lòng nhập số lớn hơn 0", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) { Text("Lưu", color = primaryPurple, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWordsDialog = false }) {
+                    Text("Hủy", color = Color.Gray, fontFamily = BeVietnamPro)
+                }
+            },
             containerColor = Color.White, shape = RoundedCornerShape(16.dp)
         )
     }
