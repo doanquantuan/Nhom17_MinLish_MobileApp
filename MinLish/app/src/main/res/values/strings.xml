@@ -14,6 +14,7 @@
     <string name="pronunciation_label">Phát âm</string>
     <string name="meaning_label">Nghĩa *</string>
     <string name="example_label">Ví dụ</string>
+    <string name="description_label">Mô tả</string>
     <string name="collocation_label">Collocation</string>
     <string name="note_label">Ghi chú</string>
     <string name="save_vocabulary">Lưu từ vựng</string>

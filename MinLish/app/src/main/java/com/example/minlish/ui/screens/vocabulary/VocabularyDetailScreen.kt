@@ -110,6 +110,7 @@ fun VocabularyDetailScreen(
 
                 DetailItem(label = stringResource(R.string.pronunciation_label), value = vocab!!.pronunciation)
                 DetailItem(label = stringResource(R.string.meaning_label), value = vocab!!.meaning)
+                DetailItem(label = stringResource(R.string.description_label), value = vocab!!.description)
                 DetailItem(label = stringResource(R.string.example_label), value = vocab!!.example)
                 DetailItem(label = stringResource(R.string.collocation_label), value = vocab!!.collocation)
                 DetailItem(label = stringResource(R.string.note_label), value = vocab!!.note)

@@ -38,6 +38,11 @@ class DashboardViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
+    private val _showReviewNotification = MutableStateFlow<Int?>(null)
+    val showReviewNotification = _showReviewNotification.asStateFlow()
+
+    private var hasShownNotificationThisSession = false
+
     private var unreadCountJob: Job? = null
 
     init {
@@ -135,6 +140,10 @@ class DashboardViewModel : ViewModel() {
                     dailyPlan = "Học mới: $newLearnedToday/$userGoal\nÔn tập: $dueToReview",
                     wordSets = deckRetentions
                 )
+
+                if (!hasShownNotificationThisSession && dueToReview > 0) {
+                    sendReviewNotification(userId, dueToReview)
+                }
 
                 // Weekly activity
                 val weeklyActivity = calculateWeeklyActivity(sessions)
@@ -295,5 +304,46 @@ class DashboardViewModel : ViewModel() {
             TimeActivity("Tối", eveningCount),
             TimeActivity("Đêm", nightCount)
         )
+    }
+
+    private fun sendReviewNotification(userId: String, count: Int) {
+        viewModelScope.launch {
+            try {
+                // Kiểm tra xem hôm nay đã có thông báo ôn tập chưa để tránh trùng lặp trong DB
+                val calendar = Calendar.getInstance()
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfToday = calendar.timeInMillis
+
+                val existingNotifications = notificationRepo.getNotificationsByUserId(userId)
+                val hasTodayNotification = existingNotifications.any { 
+                    it.timestamp >= startOfToday && it.type == "review_reminder" 
+                }
+
+                if (!hasTodayNotification) {
+                    val notification = com.example.minlish.data.model.Notification(
+                        userId = userId,
+                        title = "Ôn tập hàng ngày",
+                        description = "Hôm nay bạn có $count từ vựng cần ôn tập. Hãy bắt đầu ngay nhé!",
+                        type = "review_reminder",
+                        timestamp = System.currentTimeMillis(),
+                        isRead = false
+                    )
+                    notificationRepo.addNotification(notification)
+                }
+
+                // Luôn hiển thị thông báo hệ thống/UI một lần mỗi phiên làm việc khi vào Dashboard
+                _showReviewNotification.value = count
+                hasShownNotificationThisSession = true
+            } catch (e: Exception) {
+                android.util.Log.e("DashboardVM", "Error sending review notification", e)
+            }
+        }
+    }
+
+    fun clearNotificationEvent() {
+        _showReviewNotification.value = null
     }
 }

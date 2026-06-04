@@ -49,6 +49,21 @@ fun DashboardScreen(
     val statsData by viewModel.statsData.collectAsState()
     val isDashboardLoading by viewModel.isLoading.collectAsState()
     val unreadCount by viewModel.unreadCount.collectAsState()
+    val showReviewNotification by viewModel.showReviewNotification.collectAsState()
+    
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Observe review notification
+    LaunchedEffect(showReviewNotification) {
+        showReviewNotification?.let { count ->
+            com.example.minlish.utils.NotificationHelper.showStudyReminder(
+                context,
+                "Ôn tập hàng ngày",
+                "Hôm nay bạn có $count từ vựng cần ôn tập. Hãy bắt đầu ngay nhé!"
+            )
+            viewModel.clearNotificationEvent()
+        }
+    }
     
     // Auth state for name sync
     val userName = authViewModel.userName

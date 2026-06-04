@@ -46,6 +46,7 @@ fun AddVocabularyScreen(
     var wordType by remember { mutableStateOf("Noun") }
     var pronunciation by remember { mutableStateOf("") }
     var meaning by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
     var example by remember { mutableStateOf("") }
     var collocation by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
@@ -59,6 +60,7 @@ fun AddVocabularyScreen(
             wordType = "Noun"
             pronunciation = ""
             meaning = ""
+            description = ""
             example = ""
             collocation = ""
             note = ""
@@ -72,6 +74,7 @@ fun AddVocabularyScreen(
                 wordType = vocab.wordType
                 pronunciation = vocab.pronunciation
                 meaning = vocab.meaning
+                description = vocab.description
                 example = vocab.example
                 collocation = vocab.collocation
                 note = vocab.note
@@ -109,6 +112,7 @@ fun AddVocabularyScreen(
                                 wordType = wordType,
                                 pronunciation = pronunciation,
                                 meaning = meaning,
+                                description = description,
                                 example = example,
                                 collocation = collocation,
                                 note = note
@@ -118,6 +122,7 @@ fun AddVocabularyScreen(
                                 wordType = wordType,
                                 pronunciation = pronunciation,
                                 meaning = meaning,
+                                description = description,
                                 example = example,
                                 collocation = collocation,
                                 note = note,
@@ -232,10 +237,7 @@ fun AddVocabularyScreen(
                 )
 
                 InputFieldLocal(
-                    label = buildAnnotatedString {
-                        append("Nghĩa ")
-                        withStyle(SpanStyle(color = Color.Red)) { append("*") }
-                    },
+                    label = buildAnnotatedString { append(stringResource(R.string.meaning_label)) },
                     value = meaning,
                     onValueChange = { meaning = it },
                     placeholder = "",
@@ -243,7 +245,15 @@ fun AddVocabularyScreen(
                 )
 
                 InputFieldLocal(
-                    label = buildAnnotatedString { append("Ví dụ") },
+                    label = buildAnnotatedString { append(stringResource(R.string.description_label)) },
+                    value = description,
+                    onValueChange = { description = it },
+                    placeholder = "",
+                    minLines = 2
+                )
+
+                InputFieldLocal(
+                    label = buildAnnotatedString { append(stringResource(R.string.example_label)) },
                     value = example,
                     onValueChange = { example = it },
                     placeholder = "",
@@ -276,6 +286,7 @@ fun AddVocabularyScreen(
                                 wordType = wordType,
                                 pronunciation = pronunciation,
                                 meaning = meaning,
+                                description = description,
                                 example = example,
                                 collocation = collocation,
                                 note = note
@@ -285,6 +296,7 @@ fun AddVocabularyScreen(
                                 wordType = wordType,
                                 pronunciation = pronunciation,
                                 meaning = meaning,
+                                description = description,
                                 example = example,
                                 collocation = collocation,
                                 note = note,

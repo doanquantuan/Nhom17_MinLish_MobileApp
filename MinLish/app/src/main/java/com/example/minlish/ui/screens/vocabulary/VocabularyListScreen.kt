@@ -33,6 +33,10 @@ import com.example.minlish.data.model.Vocabulary
 import com.example.minlish.ui.theme.MinLishTheme
 import com.example.minlish.viewmodel.CsvExporter
 import com.example.minlish.viewmodel.VocabularyViewModel
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun VocabularyListScreen(
@@ -407,7 +411,21 @@ fun VocabularyItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatusTag(status = vocab.status)
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    StatusTag(status = vocab.status)
+                    if (vocab.status != "Mới") {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = formatNextReviewTime(vocab.nextReview),
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                }
 
                 IconButton(
                     onClick = onPronounceClick,
@@ -421,6 +439,37 @@ fun VocabularyItem(
                     )
                 }
             }
+        }
+    }
+}
+
+private fun formatNextReviewTime(nextReview: Long): String {
+    val now = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    
+    val reviewDate = Calendar.getInstance().apply {
+        timeInMillis = nextReview
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val diff = reviewDate - now
+    val days = (diff / (1000 * 60 * 60 * 24)).toInt()
+
+    return when {
+        days < 0 -> "Cần ôn ngay"
+        days == 0 -> "Hôm nay"
+        days == 1 -> "Ngày mai"
+        days < 30 -> "$days ngày nữa"
+        else -> {
+            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            sdf.format(Date(nextReview))
         }
     }
 }
@@ -448,6 +497,48 @@ fun StatusTag(
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
         )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun VocabularyItemPreview() {
+    val mockVocab = Vocabulary(
+        word = "Architecture",
+        wordType = "Noun",
+        meaning = "Kiến trúc",
+        status = "Thuộc",
+        nextReview = System.currentTimeMillis() + (2 * 24 * 60 * 60 * 1000) // 2 days later
+    )
+    MinLishTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            VocabularyItem(
+                vocab = mockVocab,
+                onPronounceClick = {},
+                onClick = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun VocabularyItemDuePreview() {
+    val mockVocab = Vocabulary(
+        word = "Exception",
+        wordType = "Noun",
+        meaning = "Ngoại lệ",
+        status = "Ôn lại",
+        nextReview = System.currentTimeMillis() - (1 * 24 * 60 * 60 * 1000) // Yesterday
+    )
+    MinLishTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            VocabularyItem(
+                vocab = mockVocab,
+                onPronounceClick = {},
+                onClick = {}
+            )
+        }
     }
 }
 

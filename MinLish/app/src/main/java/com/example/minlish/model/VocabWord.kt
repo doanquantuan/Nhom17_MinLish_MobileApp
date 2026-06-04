@@ -8,8 +8,10 @@ data class VocabWord(
     val phonetic: String = "",
     val partOfSpeech: String = "",
     val meaning: String = "",
+    val description: String = "",
     val example: String = "",
     val collocation: String = "",
+    val note: String = "",
     val deckId: String = "",
     
     // SM-2 parameters

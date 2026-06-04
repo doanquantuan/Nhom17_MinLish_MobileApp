@@ -6,6 +6,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -99,7 +101,12 @@ fun SrsReviewScreen(
                     .background(Color(0xFFEEEEEE), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                // Mock for avatar/image
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Completed",
+                    modifier = Modifier.size(64.dp),
+                    tint = SuccessGreen
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -227,10 +234,13 @@ fun SrsReviewScreen(
                     viewModel.resetFinishedStatus()
                     onLearnAnother()
                 },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Học tiếp bộ từ khác", color = Color.Black)
+                Text("Học tiếp bộ từ khác", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         }
     }

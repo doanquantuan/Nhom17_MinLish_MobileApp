@@ -4,6 +4,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -205,35 +207,44 @@ fun FlashcardFront(word: VocabWord) {
 
 @Composable
 fun FlashcardBack(word: VocabWord) {
+    val scrollState = rememberScrollState()
     Column(
-        modifier = Modifier.fillMaxWidth().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.Start
+    ) {
+        FlashcardField(label = "Word", value = word.word)
+        FlashcardField(label = "Meaning", value = word.meaning)
+        FlashcardField(label = "Type", value = word.partOfSpeech)
+        FlashcardField(label = "Pronunciation", value = word.phonetic)
+        FlashcardField(label = "Description", value = word.description)
+        FlashcardField(label = "Example", value = word.example)
+        FlashcardField(label = "Collocation", value = word.collocation)
+        FlashcardField(label = "Note", value = word.note)
+    }
+}
+
+@Composable
+fun FlashcardField(label: String, value: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.Start
     ) {
         Text(
-            word.meaning,
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.Black,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Text(
-            "Example:",
-            style = MaterialTheme.typography.titleMedium,
+            "$label:",
+            style = MaterialTheme.typography.titleSmall,
             color = PrimaryPurple,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Start
+            fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.height(8.dp))
         Text(
-            word.example,
+            if (value.isBlank()) "---" else value,
             style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Start,
             color = Color.DarkGray,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.padding(top = 2.dp)
         )
     }
 }
