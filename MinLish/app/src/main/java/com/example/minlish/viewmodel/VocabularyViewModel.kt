@@ -303,10 +303,12 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
                     finalSetId = targetSetId
                 }
 
+                // Fetch existing words in this set to check for duplicates
+                val existingWords = vocabularyRepository.getWordsBySet(finalSetId)
                 var successCount = 0
+                var updatedCount = 0
 
                 for (line in lines) {
-
                     val columns =
                         line.split(
                             ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()
@@ -317,48 +319,33 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
                                 .replace("\"\"", "\"")
                         }
 
-                    if (columns.isNotEmpty() &&
-                        columns[0].isNotBlank()
-                    ) {
+                    if (columns.isNotEmpty() && columns[0].isNotBlank()) {
+                        val wordText = cleanCsvField(columns.getOrElse(0) { "" })
+                        
+                        // Case-insensitive duplicate check
+                        val existing = existingWords.find { it.word.equals(wordText, ignoreCase = true) }
 
-                        val newVocab = Vocabulary(
+                        val vocabData = Vocabulary(
+                            id = existing?.id ?: "", // Use existing ID if it's an update
                             setId = finalSetId,
-
-                            word = cleanCsvField(
-                                columns.getOrElse(0) { "" }
-                            ),
-
-                            meaning = cleanCsvField(
-                                columns.getOrElse(1) { "" }
-                            ),
-
-                            wordType = cleanCsvField(
-                                columns.getOrElse(2) { "" }
-                            ),
-
-                            pronunciation = cleanCsvField(
-                                columns.getOrElse(3) { "" }
-                            ),
-
-                            description = cleanCsvField(
-                                columns.getOrElse(4) { "" }
-                            ),
-
-                            example = cleanCsvField(
-                                columns.getOrElse(5) { "" }
-                            ),
-
-                            collocation = cleanCsvField(
-                                columns.getOrElse(6) { "" }
-                            ),
-
-                            note = cleanCsvField(
-                                columns.getOrElse(7) { "" }
-                            )
+                            word = wordText,
+                            meaning = cleanCsvField(columns.getOrElse(1) { "" }),
+                            wordType = cleanCsvField(columns.getOrElse(2) { "" }),
+                            pronunciation = cleanCsvField(columns.getOrElse(3) { "" }),
+                            description = cleanCsvField(columns.getOrElse(4) { "" }),
+                            example = cleanCsvField(columns.getOrElse(5) { "" }),
+                            collocation = cleanCsvField(columns.getOrElse(6) { "" }),
+                            note = cleanCsvField(columns.getOrElse(7) { "" }),
+                            status = existing?.status ?: "Mới"
                         )
 
-                        vocabularyRepository.addWord(newVocab)
-                        successCount++
+                        if (existing != null) {
+                            vocabularyRepository.updateWord(vocabData)
+                            updatedCount++
+                        } else {
+                            vocabularyRepository.addWord(vocabData)
+                            successCount++
+                        }
                     }
                 }
 
@@ -370,10 +357,12 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
 
                 _isLoading.value = false
 
-                onComplete(
-                    true,
-                    "Tuyệt vời! Đã import thành công $successCount từ vựng."
-                )
+                val message = if (updatedCount > 0) {
+                    "Thành công! Đã thêm $successCount từ mới và cập nhật $updatedCount từ đã tồn tại."
+                } else {
+                    "Thành công! Đã thêm $successCount từ vựng."
+                }
+                onComplete(true, message)
 
             } catch (e: Exception) {
 

@@ -48,7 +48,7 @@ fun VocabularyListScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredList = remember(vocabList, searchQuery) {
-        vocabList.filter { it.word.contains(searchQuery, ignoreCase = true) || it.meaning.contains(searchQuery, ignoreCase = true) }
+        vocabList.filter { it.word.contains(searchQuery, ignoreCase = true) }
     }
 
     val total = vocabList.size
@@ -433,7 +433,7 @@ fun StatusTag(
     val (backgroundColor, textColor, textRes) = when (status) {
         "Ôn lại" -> Triple(Color(0xFFFFF1E6), Color(0xFFE48C07), R.string.review_tag)
         "Thuộc" -> Triple(Color(0xFFE6F4EA), Color(0xFF006D3C), R.string.learned_tag)
-        else -> Triple(Color(0xFFFFEBEE), Color(0xFFD32F2F), R.string.new_tag)
+        else -> Triple(Color(0xFFE3F2FD), Color(0xFF1976D2), R.string.new_tag)
     }
 
     Surface(

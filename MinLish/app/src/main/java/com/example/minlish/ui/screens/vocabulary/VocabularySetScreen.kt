@@ -355,18 +355,21 @@ fun MinLishBottomNavigation(navController: NavController) {
         tonalElevation = 8.dp
     ) {
         val items = listOf(
-            BottomNavItem("Trang chủ", Icons.Default.Home, "home"),
-            BottomNavItem("Bộ từ", Icons.AutoMirrored.Filled.MenuBook, Routes.VocabularySet.route),
-            BottomNavItem("Học", Icons.Default.Description, "study"),
-            BottomNavItem("Thống kê", Icons.Default.BarChart, "stats"),
-            BottomNavItem("Cá nhân", Icons.Default.Person, "profile")
+            BottomNavItem("Trang chủ", Icons.Default.Home, "dashboard/0"),
+            BottomNavItem("Bộ từ", Icons.AutoMirrored.Filled.MenuBook, "dashboard/1"),
+            BottomNavItem("Học", Icons.Default.Description, "dashboard/2"),
+            BottomNavItem("Thống kê", Icons.Default.BarChart, "dashboard/3"),
+            BottomNavItem("Cá nhân", Icons.Default.Person, "dashboard/4")
         )
 
         items.forEach { item ->
+            val isSelected = currentRoute == item.route || 
+                           (item.route == "dashboard/1" && currentRoute == Routes.VocabularySet.route)
+
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = item.title) },
                 label = { Text(item.title, fontSize = 10.sp) },
-                selected = currentRoute == item.route,
+                selected = isSelected,
                 onClick = {
                     if (currentRoute != item.route) {
                         navController.navigate(item.route) {
@@ -391,49 +394,3 @@ fun MinLishBottomNavigation(navController: NavController) {
 }
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val route: String)
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun VocabularySetScreenPreview() {
-//    val sampleSets = listOf(
-//        VocabularySet(
-//            id = "1",
-//            title = "IELTS Essential Words",
-//            category = "IELTS",
-//            wordCount = 50,
-//            progress = 30,
-//            updateAt = System.currentTimeMillis()
-//        ),
-//        VocabularySet(
-//            id = "2",
-//            title = "Business Meetings",
-//            category = "Business",
-//            wordCount = 25,
-//            progress = 75,
-//            updateAt = System.currentTimeMillis()
-//        ),
-//        VocabularySet(
-//            id = "3",
-//            title = "Travel Phrases",
-//            category = "Travel",
-//            wordCount = 40,
-//            progress = 10,
-//            updateAt = System.currentTimeMillis()
-//        )
-//    )
-//
-//    MinLishTheme {
-//        VocabularySetScreenContent(
-//            vocabularySets = sampleSets,
-//            isLoading = false,
-//            onAddSetClick = {},
-//            onDeleteSet = {},
-//            onEditSet = {},
-//            onSetClick = {},
-//            bottomBar = {
-//                val navController = rememberNavController()
-//                MinLishBottomNavigation(navController = navController)
-//            }
-//        )
-//    }
-//}

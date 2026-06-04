@@ -41,6 +41,7 @@ fun AddVocabularyScreen(
     modifier: Modifier = Modifier
 ) {
     val currentVocabulary by viewModel.currentVocabulary.collectAsState()
+    val vocabList by viewModel.vocabularies.collectAsState()
 
     var word by remember { mutableStateOf("") }
     var wordType by remember { mutableStateOf("Noun") }
@@ -49,6 +50,13 @@ fun AddVocabularyScreen(
     var example by remember { mutableStateOf("") }
     var collocation by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
+    
+    var showDuplicateDialog by remember { mutableStateOf(false) }
+    var duplicateVocab by remember { mutableStateOf<Vocabulary?>(null) }
+
+    LaunchedEffect(setId) {
+        viewModel.loadVocabularies(setId)
+    }
 
     LaunchedEffect(vocabularyId) {
         if (vocabularyId != null) {
@@ -82,6 +90,43 @@ fun AddVocabularyScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val wordTypes = listOf("Noun", "Verb", "Adjective", "Adverb", "Preposition", "Conjunction", "Pronoun", "Interjection")
 
+    if (showDuplicateDialog && duplicateVocab != null) {
+        AlertDialog(
+            onDismissRequest = { showDuplicateDialog = false },
+            title = { Text("Từ vựng đã tồn tại") },
+            text = { Text("Từ '${word}' đã có trong bộ từ này. Bạn có muốn cập nhật thông tin cho từ này không?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val updatedVocab = duplicateVocab!!.copy(
+                            word = word,
+                            wordType = wordType,
+                            pronunciation = pronunciation,
+                            meaning = meaning,
+                            example = example,
+                            collocation = collocation,
+                            note = note
+                        )
+                        viewModel.updateVocabulary(updatedVocab) { success ->
+                            if (success) {
+                                showDuplicateDialog = false
+                                navController.popBackStack()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5145B1))
+                ) {
+                    Text("Thay thế")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDuplicateDialog = false }) {
+                    Text("Hủy")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -98,47 +143,6 @@ fun AddVocabularyScreen(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color.White
-                        )
-                    }
-                },
-                actions = {
-                    TextButton(onClick = {
-                        if (word.isNotBlank() && meaning.isNotBlank()) {
-                            val vocab = currentVocabulary?.copy(
-                                word = word,
-                                wordType = wordType,
-                                pronunciation = pronunciation,
-                                meaning = meaning,
-                                example = example,
-                                collocation = collocation,
-                                note = note
-                            ) ?: Vocabulary(
-                                setId = setId,
-                                word = word,
-                                wordType = wordType,
-                                pronunciation = pronunciation,
-                                meaning = meaning,
-                                example = example,
-                                collocation = collocation,
-                                note = note,
-                                status = "Mới"
-                            )
-                            
-                            if (vocabularyId == null) {
-                                viewModel.addVocabulary(vocab) { success ->
-                                    if (success) navController.popBackStack()
-                                }
-                            } else {
-                                viewModel.updateVocabulary(vocab) { success ->
-                                    if (success) navController.popBackStack()
-                                }
-                            }
-                        }
-                    }) {
-                        Text(
-                            stringResource(R.string.save),
-                            color = Color.White,
-                            fontSize = 18.sp
                         )
                     }
                 },
@@ -271,33 +275,43 @@ fun AddVocabularyScreen(
                 Button(
                     onClick = {
                         if (word.isNotBlank() && meaning.isNotBlank()) {
-                            val vocab = currentVocabulary?.copy(
-                                word = word,
-                                wordType = wordType,
-                                pronunciation = pronunciation,
-                                meaning = meaning,
-                                example = example,
-                                collocation = collocation,
-                                note = note
-                            ) ?: Vocabulary(
-                                setId = setId,
-                                word = word,
-                                wordType = wordType,
-                                pronunciation = pronunciation,
-                                meaning = meaning,
-                                example = example,
-                                collocation = collocation,
-                                note = note,
-                                status = "Mới"
-                            )
+                            // Check for duplicate word (case-insensitive)
+                            val existing = vocabList.find { 
+                                it.word.equals(word.trim(), ignoreCase = true) && it.id != vocabularyId 
+                            }
                             
-                            if (vocabularyId == null) {
-                                viewModel.addVocabulary(vocab) { success ->
-                                    if (success) navController.popBackStack()
-                                }
+                            if (existing != null) {
+                                duplicateVocab = existing
+                                showDuplicateDialog = true
                             } else {
-                                viewModel.updateVocabulary(vocab) { success ->
-                                    if (success) navController.popBackStack()
+                                val vocab = currentVocabulary?.copy(
+                                    word = word.trim(),
+                                    wordType = wordType,
+                                    pronunciation = pronunciation,
+                                    meaning = meaning,
+                                    example = example,
+                                    collocation = collocation,
+                                    note = note
+                                ) ?: Vocabulary(
+                                    setId = setId,
+                                    word = word.trim(),
+                                    wordType = wordType,
+                                    pronunciation = pronunciation,
+                                    meaning = meaning,
+                                    example = example,
+                                    collocation = collocation,
+                                    note = note,
+                                    status = "Mới"
+                                )
+                                
+                                if (vocabularyId == null) {
+                                    viewModel.addVocabulary(vocab) { success ->
+                                        if (success) navController.popBackStack()
+                                    }
+                                } else {
+                                    viewModel.updateVocabulary(vocab) { success ->
+                                        if (success) navController.popBackStack()
+                                    }
                                 }
                             }
                         }
@@ -357,7 +371,7 @@ fun InputFieldLocal(
             singleLine = singleLine,
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Sentences,
-                autoCorrectEnabled = false,
+                autoCorrectEnabled = true,
                 keyboardType = KeyboardType.Text,
                 imeAction = if (singleLine) ImeAction.Next else ImeAction.Default
             )

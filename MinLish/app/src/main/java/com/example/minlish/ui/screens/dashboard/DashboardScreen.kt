@@ -93,35 +93,90 @@ fun DashboardScreen(
             ) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    onClick = { 
+                        if (selectedTab != 0) {
+                            navController.navigate("dashboard/0") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        selectedTab = 0 
+                    },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },
                     label = { Text("Trang chủ", fontFamily = BeVietnamPro) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, selectedTextColor = primaryPurple)
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    onClick = { 
+                        if (selectedTab != 1) {
+                            navController.navigate("dashboard/1") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        selectedTab = 1 
+                    },
                     icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
                     label = { Text("Bộ từ", fontFamily = BeVietnamPro) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, selectedTextColor = primaryPurple)
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
+                    onClick = { 
+                        if (selectedTab != 2) {
+                            navController.navigate("dashboard/2") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        selectedTab = 2 
+                    },
                     icon = { Icon(Icons.Default.Book, contentDescription = null) },
                     label = { Text("Học", fontFamily = BeVietnamPro) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, selectedTextColor = primaryPurple)
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
+                    onClick = { 
+                        if (selectedTab != 3) {
+                            navController.navigate("dashboard/3") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        selectedTab = 3 
+                    },
                     icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
                     label = { Text("Thống kê", fontFamily = BeVietnamPro) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, selectedTextColor = primaryPurple)
                 )
                 NavigationBarItem(
                     selected = selectedTab == 4,
-                    onClick = { selectedTab = 4 },
+                    onClick = { 
+                        if (selectedTab != 4) {
+                            navController.navigate("dashboard/4") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        selectedTab = 4 
+                    },
                     icon = { Icon(Icons.Default.Person, contentDescription = null) },
                     label = { Text("Cá nhân", fontFamily = BeVietnamPro) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, selectedTextColor = primaryPurple)
