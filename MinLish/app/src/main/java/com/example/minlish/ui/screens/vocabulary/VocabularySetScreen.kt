@@ -18,16 +18,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import com.example.minlish.data.model.VocabularySet
 import com.example.minlish.navigation.Routes
-import com.example.minlish.ui.theme.MinLishTheme
 import com.example.minlish.viewmodel.VocabularyViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -52,8 +49,8 @@ fun VocabularySetScreen(
         setWordCounts = setWordCounts,
         isLoading = isLoading,
         onAddSetClick = { navController.navigate(Routes.CreateSet.route) },
-        onDeleteSet = { viewModel.deleteVocabularySet(it) },
-        onEditSet = { viewModel.updateVocabularySet(it) },
+        onDeleteSet = { setId -> viewModel.deleteVocabularySet(setId) },
+        onEditSet = { set -> viewModel.updateVocabularySet(set) },
         onSetClick = { setId ->
             navController.navigate(Routes.VocabularyList.passSetId(setId))
         },
@@ -74,16 +71,16 @@ fun VocabularySetScreenContent(
     bottomBar: @Composable () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    
+
     // Dynamic categories
     val dynamicCategories = remember(vocabularySets) {
         listOf("Tất cả") + vocabularySets.map { it.category }.distinct().sorted()
     }
     var selectedCategory by remember { mutableStateOf("Tất cả") }
 
-    val filteredSets = vocabularySets.filter { 
+    val filteredSets = vocabularySets.filter {
         (selectedCategory == "Tất cả" || it.category == selectedCategory) &&
-        it.title.contains(searchQuery, ignoreCase = true)
+                it.title.contains(searchQuery, ignoreCase = true)
     }
 
     Scaffold(
@@ -208,7 +205,7 @@ fun VocabularySetScreenContent(
                         onClick = { onSetClick(set.id) }
                     )
                 }
-                
+
                 // Extra padding for FAB
                 item {
                     Spacer(modifier = Modifier.height(80.dp))
@@ -235,7 +232,7 @@ fun VocabularySetCard(
 
     val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val lastUpdated = sdf.format(Date(set.updateAt))
-    
+
     var showMenu by remember { mutableStateOf(false) }
 
     Card(
@@ -266,7 +263,7 @@ fun VocabularySetCard(
                         color = Color.Gray
                     )
                 }
-                
+
                 Box {
                     IconButton(onClick = { showMenu = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Menu")
@@ -277,19 +274,17 @@ fun VocabularySetCard(
                     ) {
                         DropdownMenuItem(
                             text = { Text("Chỉnh sửa") },
-                            onClick = { 
-                                // In a real app, this would open a dialog or navigate
-                                // For now, we just pass the object back
+                            onClick = {
                                 onEdit(set)
-                                showMenu = false 
+                                showMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
                         )
                         DropdownMenuItem(
                             text = { Text("Xóa", color = Color.Red) },
-                            onClick = { 
+                            onClick = {
                                 onDelete()
-                                showMenu = false 
+                                showMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red) }
                         )
@@ -355,18 +350,21 @@ fun MinLishBottomNavigation(navController: NavController) {
         tonalElevation = 8.dp
     ) {
         val items = listOf(
-            BottomNavItem("Trang chủ", Icons.Default.Home, "home"),
-            BottomNavItem("Bộ từ", Icons.AutoMirrored.Filled.MenuBook, Routes.VocabularySet.route),
-            BottomNavItem("Học", Icons.Default.Description, "study"),
-            BottomNavItem("Thống kê", Icons.Default.BarChart, "stats"),
-            BottomNavItem("Cá nhân", Icons.Default.Person, "profile")
+            BottomNavItem("Trang chủ", Icons.Default.Home, "dashboard/0"),
+            BottomNavItem("Bộ từ", Icons.AutoMirrored.Filled.MenuBook, "dashboard/1"),
+            BottomNavItem("Học", Icons.Default.Description, "dashboard/2"),
+            BottomNavItem("Thống kê", Icons.Default.BarChart, "dashboard/3"),
+            BottomNavItem("Cá nhân", Icons.Default.Person, "dashboard/4")
         )
 
         items.forEach { item ->
+            val isSelected = currentRoute == item.route ||
+                    (item.route == "dashboard/1" && currentRoute == Routes.VocabularySet.route)
+
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = item.title) },
                 label = { Text(item.title, fontSize = 10.sp) },
-                selected = currentRoute == item.route,
+                selected = isSelected,
                 onClick = {
                     if (currentRoute != item.route) {
                         navController.navigate(item.route) {
@@ -391,49 +389,3 @@ fun MinLishBottomNavigation(navController: NavController) {
 }
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val route: String)
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun VocabularySetScreenPreview() {
-//    val sampleSets = listOf(
-//        VocabularySet(
-//            id = "1",
-//            title = "IELTS Essential Words",
-//            category = "IELTS",
-//            wordCount = 50,
-//            progress = 30,
-//            updateAt = System.currentTimeMillis()
-//        ),
-//        VocabularySet(
-//            id = "2",
-//            title = "Business Meetings",
-//            category = "Business",
-//            wordCount = 25,
-//            progress = 75,
-//            updateAt = System.currentTimeMillis()
-//        ),
-//        VocabularySet(
-//            id = "3",
-//            title = "Travel Phrases",
-//            category = "Travel",
-//            wordCount = 40,
-//            progress = 10,
-//            updateAt = System.currentTimeMillis()
-//        )
-//    )
-//
-//    MinLishTheme {
-//        VocabularySetScreenContent(
-//            vocabularySets = sampleSets,
-//            isLoading = false,
-//            onAddSetClick = {},
-//            onDeleteSet = {},
-//            onEditSet = {},
-//            onSetClick = {},
-//            bottomBar = {
-//                val navController = rememberNavController()
-//                MinLishBottomNavigation(navController = navController)
-//            }
-//        )
-//    }
-//}

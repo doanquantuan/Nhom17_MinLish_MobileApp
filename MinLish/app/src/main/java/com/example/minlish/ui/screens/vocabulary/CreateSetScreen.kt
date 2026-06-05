@@ -2,6 +2,7 @@ package com.example.minlish.ui.screens.vocabulary
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -9,6 +10,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,9 +26,15 @@ fun CreateSetScreen(
     viewModel: VocabularyViewModel = viewModel()
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
+    val vocabularySets by viewModel.vocabularySets.collectAsState()
+
+    val existingCategories = remember(vocabularySets) {
+        vocabularySets.map { it.category }.distinct().filter { it.isNotBlank() }.sorted()
+    }
 
     CreateSetContent(
         isLoading = isLoading,
+        existingCategories = existingCategories,
         onBackClick = { navController.popBackStack() },
         onCreateSet = { title, description, category ->
             viewModel.createVocabularySet(title, description, category) { success ->
@@ -41,14 +50,22 @@ fun CreateSetScreen(
 @Composable
 fun CreateSetContent(
     isLoading: Boolean,
+    existingCategories: List<String>,
     onBackClick: () -> Unit,
     onCreateSet: (String, String, String) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    val categories = listOf("IELTS", "Business", "Travel", "General")
-    var selectedCategory by remember { mutableStateOf("General") }
+    var selectedCategory by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
+
+    val filteredCategories = remember(selectedCategory, existingCategories) {
+        if (selectedCategory.isEmpty()) {
+            existingCategories
+        } else {
+            existingCategories.filter { it.contains(selectedCategory, ignoreCase = true) }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -82,7 +99,12 @@ fun CreateSetContent(
                 onValueChange = { title = it },
                 label = { Text("Tên bộ từ") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    autoCorrectEnabled = true,
+                    keyboardType = KeyboardType.Text
+                )
             )
 
             OutlinedTextField(
@@ -91,38 +113,53 @@ fun CreateSetContent(
                 label = { Text("Mô tả (không bắt buộc)") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                minLines = 3
+                minLines = 3,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    autoCorrectEnabled = true,
+                    keyboardType = KeyboardType.Text
+                )
             )
 
             Box(modifier = Modifier.fillMaxWidth()) {
                 ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
+                    expanded = expanded && filteredCategories.isNotEmpty(),
+                    onExpandedChange = { expanded = it }
                 ) {
                     OutlinedTextField(
                         value = selectedCategory,
-                        onValueChange = {},
-                        readOnly = true,
+                        onValueChange = {
+                            selectedCategory = it
+                            expanded = true
+                        },
                         label = { Text("Chủ đề") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                            .menuAnchor(MenuAnchorType.PrimaryEditable)
                             .fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        placeholder = { Text("Nhập hoặc chọn chủ đề") },
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Sentences,
+                            autoCorrectEnabled = true,
+                            keyboardType = KeyboardType.Text
+                        )
                     )
 
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        categories.forEach { category ->
-                            DropdownMenuItem(
-                                text = { Text(category) },
-                                onClick = {
-                                    selectedCategory = category
-                                    expanded = false
-                                }
-                            )
+                    if (filteredCategories.isNotEmpty()) {
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            filteredCategories.forEach { category ->
+                                DropdownMenuItem(
+                                    text = { Text(category) },
+                                    onClick = {
+                                        selectedCategory = category
+                                        expanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -133,7 +170,7 @@ fun CreateSetContent(
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
-                        onCreateSet(title, description, selectedCategory)
+                        onCreateSet(title, description, selectedCategory.ifBlank { "Chung" })
                     }
                 },
                 modifier = Modifier
@@ -152,14 +189,3 @@ fun CreateSetContent(
         }
     }
 }
-
-
-//@Preview(showBackground = true)
-//@Composable
-//fun CreateSetScreenPreview() {
-//    CreateSetContent(
-//        isLoading = false,
-//        onBackClick = {},
-//        onCreateSet = { _, _, _ -> }
-//    )
-//}

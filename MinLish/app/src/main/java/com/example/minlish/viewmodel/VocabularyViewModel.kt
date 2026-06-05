@@ -109,14 +109,14 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
             _isLoading.value = true
             try {
                 val userId = auth.currentUser?.uid
-                
+
                 val sets = if (userId != null) {
                     repository.getSetsByUserId(userId)
                 } else {
                     repository.getAllSets()
                 }
                 _vocabularySets.value = sets
-                
+
                 // Fetch counts for each set
                 val counts = mutableMapOf<String, Int>()
                 sets.forEach { set ->
@@ -321,7 +321,7 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
 
                     if (columns.isNotEmpty() && columns[0].isNotBlank()) {
                         val wordText = cleanCsvField(columns.getOrElse(0) { "" })
-                        
+
                         // Case-insensitive duplicate check
                         val existing = existingWords.find { it.word.equals(wordText, ignoreCase = true) }
 
@@ -332,9 +332,9 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
                             meaning = cleanCsvField(columns.getOrElse(1) { "" }),
                             wordType = cleanCsvField(columns.getOrElse(2) { "" }),
                             pronunciation = cleanCsvField(columns.getOrElse(3) { "" }),
-                            example = cleanCsvField(columns.getOrElse(4) { "" }),
-                            collocation = cleanCsvField(columns.getOrElse(5) { "" }),
-                            note = cleanCsvField(columns.getOrElse(6) { "" }),
+                            example = cleanCsvField(columns.getOrElse(5) { "" }),
+                            collocation = cleanCsvField(columns.getOrElse(6) { "" }),
+                            note = cleanCsvField(columns.getOrElse(7) { "" }),
                             status = existing?.status ?: "Mới"
                         )
 
@@ -419,7 +419,7 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
                 val csvContent = StringBuilder()
 
                 csvContent.append(
-                    "Word,Meaning,Type,Pronunciation,Example,Collocation,Note\n"
+                    "Word,Meaning,Type,Pronunciation,Description,Example,Collocation,Note\n"
                 )
 
                 for (v in vocabList) {

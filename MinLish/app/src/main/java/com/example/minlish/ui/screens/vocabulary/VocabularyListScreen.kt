@@ -33,10 +33,6 @@ import com.example.minlish.data.model.Vocabulary
 import com.example.minlish.ui.theme.MinLishTheme
 import com.example.minlish.viewmodel.CsvExporter
 import com.example.minlish.viewmodel.VocabularyViewModel
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun VocabularyListScreen(
@@ -52,7 +48,7 @@ fun VocabularyListScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredList = remember(vocabList, searchQuery) {
-        vocabList.filter { it.word.contains(searchQuery, ignoreCase = true) || it.meaning.contains(searchQuery, ignoreCase = true) }
+        vocabList.filter { it.word.contains(searchQuery, ignoreCase = true) }
     }
 
     val total = vocabList.size
@@ -166,7 +162,7 @@ fun VocabularyListScreen(
                         color = Color(0xFFEEEEEE)
                     )
                 }
-                
+
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -326,12 +322,12 @@ fun SearchAndAddRow(
         OutlinedTextField(
             value = searchText,
             onValueChange = onSearchChange,
-            placeholder = { 
+            placeholder = {
                 Text(
-                    stringResource(R.string.search_word), 
+                    stringResource(R.string.search_word),
                     color = Color.Gray,
                     fontSize = 18.sp
-                ) 
+                )
             },
             modifier = Modifier
                 .weight(1f)
@@ -355,8 +351,8 @@ fun SearchAndAddRow(
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5145B1))
         ) {
             Text(
-                stringResource(R.string.add), 
-                color = Color.White, 
+                stringResource(R.string.add),
+                color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -411,21 +407,7 @@ fun VocabularyItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    StatusTag(status = vocab.status)
-                    if (vocab.status != "Mới") {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = formatNextReviewTime(vocab.nextReview),
-                            fontSize = 12.sp,
-                            color = Color.Gray,
-                            fontWeight = FontWeight.Normal
-                        )
-                    }
-                }
+                StatusTag(status = vocab.status)
 
                 IconButton(
                     onClick = onPronounceClick,
@@ -443,37 +425,6 @@ fun VocabularyItem(
     }
 }
 
-private fun formatNextReviewTime(nextReview: Long): String {
-    val now = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
-    
-    val reviewDate = Calendar.getInstance().apply {
-        timeInMillis = nextReview
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
-
-    val diff = reviewDate - now
-    val days = (diff / (1000 * 60 * 60 * 24)).toInt()
-
-    return when {
-        days < 0 -> "Cần ôn ngay"
-        days == 0 -> "Hôm nay"
-        days == 1 -> "Ngày mai"
-        days < 30 -> "$days ngày nữa"
-        else -> {
-            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            sdf.format(Date(nextReview))
-        }
-    }
-}
-
 @Composable
 fun StatusTag(
     status: String,
@@ -482,7 +433,7 @@ fun StatusTag(
     val (backgroundColor, textColor, textRes) = when (status) {
         "Ôn lại" -> Triple(Color(0xFFFFF1E6), Color(0xFFE48C07), R.string.review_tag)
         "Thuộc" -> Triple(Color(0xFFE6F4EA), Color(0xFF006D3C), R.string.learned_tag)
-        else -> Triple(Color(0xFFFFEBEE), Color(0xFFD32F2F), R.string.new_tag)
+        else -> Triple(Color(0xFFE3F2FD), Color(0xFF1976D2), R.string.new_tag)
     }
 
     Surface(
@@ -500,55 +451,3 @@ fun StatusTag(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun VocabularyItemPreview() {
-    val mockVocab = Vocabulary(
-        word = "Architecture",
-        wordType = "Noun",
-        meaning = "Kiến trúc",
-        status = "Thuộc",
-        nextReview = System.currentTimeMillis() + (2 * 24 * 60 * 60 * 1000) // 2 days later
-    )
-    MinLishTheme {
-        Box(modifier = Modifier.padding(16.dp)) {
-            VocabularyItem(
-                vocab = mockVocab,
-                onPronounceClick = {},
-                onClick = {}
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun VocabularyItemDuePreview() {
-    val mockVocab = Vocabulary(
-        word = "Exception",
-        wordType = "Noun",
-        meaning = "Ngoại lệ",
-        status = "Ôn lại",
-        nextReview = System.currentTimeMillis() - (1 * 24 * 60 * 60 * 1000) // Yesterday
-    )
-    MinLishTheme {
-        Box(modifier = Modifier.padding(16.dp)) {
-            VocabularyItem(
-                vocab = mockVocab,
-                onPronounceClick = {},
-                onClick = {}
-            )
-        }
-    }
-}
-
-//@Preview(showBackground = true)
-//@Composable
-//fun VocabularyListScreenPreview() {
-//    MinLishTheme {
-//        VocabularyListScreen(
-//            navController = rememberNavController(),
-//            setId = "1"
-//        )
-//    }
-//}

@@ -29,6 +29,7 @@ import com.example.minlish.ui.screens.profile.ProfileScreen
 import com.example.minlish.ui.screens.vocabulary.VocabularySetScreenContent
 import com.example.minlish.ui.screens.vocabulary.WordSetListContent
 import com.example.minlish.navigation.Routes
+import com.example.minlish.data.model.VocabularySet
 import com.example.minlish.viewmodel.AuthViewModel
 import com.example.minlish.viewmodel.DashboardViewModel
 import com.example.minlish.viewmodel.LearningViewModel
@@ -36,7 +37,7 @@ import com.example.minlish.viewmodel.VocabularyViewModel
 
 @Composable
 fun DashboardScreen(
-    navController: NavController, 
+    navController: NavController,
     viewModel: DashboardViewModel = viewModel(),
     vocabViewModel: VocabularyViewModel = viewModel(),
     learningViewModel: LearningViewModel = viewModel(),
@@ -49,25 +50,10 @@ fun DashboardScreen(
     val statsData by viewModel.statsData.collectAsState()
     val isDashboardLoading by viewModel.isLoading.collectAsState()
     val unreadCount by viewModel.unreadCount.collectAsState()
-    val showReviewNotification by viewModel.showReviewNotification.collectAsState()
-    
-    val context = androidx.compose.ui.platform.LocalContext.current
 
-    // Observe review notification
-    LaunchedEffect(showReviewNotification) {
-        showReviewNotification?.let { count ->
-            com.example.minlish.utils.NotificationHelper.showStudyReminder(
-                context,
-                "Ôn tập hàng ngày",
-                "Hôm nay bạn có $count từ vựng cần ôn tập. Hãy bắt đầu ngay nhé!"
-            )
-            viewModel.clearNotificationEvent()
-        }
-    }
-    
     // Auth state for name sync
     val userName = authViewModel.userName
-    
+
     // Dashboard state refresh
     val isFinished by learningViewModel.isFinished.collectAsState()
     LaunchedEffect(isFinished) {
@@ -89,12 +75,12 @@ fun DashboardScreen(
             2 -> learningViewModel.loadRealDecks()
         }
     }
-    
+
     // Vocab state
     val vocabularySets by vocabViewModel.vocabularySets.collectAsState()
     val setWordCounts by vocabViewModel.setWordCounts.collectAsState()
     val isVocabLoading by vocabViewModel.isLoading.collectAsState()
-    
+
     // Learning state
     val filteredDecks by learningViewModel.filteredDecks.collectAsState()
     val filterMode by learningViewModel.filterMode.collectAsState()
@@ -108,35 +94,90 @@ fun DashboardScreen(
             ) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    onClick = {
+                        if (selectedTab != 0) {
+                            navController.navigate("dashboard/0") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        selectedTab = 0
+                    },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },
                     label = { Text("Trang chủ", fontFamily = BeVietnamPro) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, selectedTextColor = primaryPurple)
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    onClick = {
+                        if (selectedTab != 1) {
+                            navController.navigate("dashboard/1") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        selectedTab = 1
+                    },
                     icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
                     label = { Text("Bộ từ", fontFamily = BeVietnamPro) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, selectedTextColor = primaryPurple)
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
+                    onClick = {
+                        if (selectedTab != 2) {
+                            navController.navigate("dashboard/2") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        selectedTab = 2
+                    },
                     icon = { Icon(Icons.Default.Book, contentDescription = null) },
                     label = { Text("Học", fontFamily = BeVietnamPro) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, selectedTextColor = primaryPurple)
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
+                    onClick = {
+                        if (selectedTab != 3) {
+                            navController.navigate("dashboard/3") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        selectedTab = 3
+                    },
                     icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
                     label = { Text("Thống kê", fontFamily = BeVietnamPro) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, selectedTextColor = primaryPurple)
                 )
                 NavigationBarItem(
                     selected = selectedTab == 4,
-                    onClick = { selectedTab = 4 },
+                    onClick = {
+                        if (selectedTab != 4) {
+                            navController.navigate("dashboard/4") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        selectedTab = 4
+                    },
                     icon = { Icon(Icons.Default.Person, contentDescription = null) },
                     label = { Text("Cá nhân", fontFamily = BeVietnamPro) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, selectedTextColor = primaryPurple)
@@ -182,12 +223,12 @@ fun DashboardScreen(
                     setWordCounts = setWordCounts,
                     isLoading = isVocabLoading,
                     onAddSetClick = { navController.navigate(Routes.CreateSet.route) },
-                    onDeleteSet = { 
-                        vocabViewModel.deleteVocabularySet(it)
-                        viewModel.refreshData() 
+                    onDeleteSet = { setId: String ->
+                        vocabViewModel.deleteVocabularySet(setId)
+                        viewModel.refreshData()
                     },
-                    onEditSet = { 
-                        vocabViewModel.updateVocabularySet(it)
+                    onEditSet = { set: VocabularySet ->
+                        vocabViewModel.updateVocabularySet(set)
                         viewModel.refreshData()
                     },
                     onSetClick = { setId ->
@@ -213,8 +254,8 @@ fun DashboardScreen(
 
 @Composable
 fun HomeContent(
-    data: com.example.minlish.model.DashboardData, 
-    primaryColor: Color, 
+    data: com.example.minlish.model.DashboardData,
+    primaryColor: Color,
     displayName: String,
     onStartLearning: () -> Unit,
     onNavigateToNotifications: () -> Unit,
@@ -302,9 +343,9 @@ fun HomeContent(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatCard(label = "TỪ ĐÃ HỌC", value = data.userStats.wordsLearned.toString(), modifier = Modifier.weight(1f), valueColor = primaryColor)
                 StatCard(
-                    label = "STREAK", 
-                    value = data.userStats.streak.toString(), 
-                    modifier = Modifier.weight(1f), 
+                    label = "STREAK",
+                    value = data.userStats.streak.toString(),
+                    modifier = Modifier.weight(1f),
                     valueColor = Color(0xFFE67E22),
                     icon = { Text("🔥") }
                 )
@@ -395,15 +436,15 @@ fun StatisticsContent(data: com.example.minlish.model.StatisticsData, primaryCol
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatCard(
-                    label = "TỔNG PHIÊN HỌC", 
-                    value = data.totalSessions.toString(), 
+                    label = "TỔNG PHIÊN HỌC",
+                    value = data.totalSessions.toString(),
                     modifier = Modifier.weight(1f),
                     backgroundColor = primaryColor.copy(alpha = 0.05f),
                     valueColor = primaryColor
                 )
                 StatCard(
-                    label = "THỜI GIAN HỌC", 
-                    value = data.totalStudyTime, 
+                    label = "THỜI GIAN HỌC",
+                    value = data.totalStudyTime,
                     modifier = Modifier.weight(1f),
                     backgroundColor = Color(0xFF2980B9).copy(alpha = 0.05f),
                     valueColor = Color(0xFF2980B9)
@@ -435,16 +476,16 @@ fun TimeActivityChart(data: List<com.example.minlish.model.TimeActivity>, primar
                         .fillMaxWidth()
                         .height(maxOf(4.dp, (70.dp * (activity.count.toFloat() / maxCount))))
                         .background(
-                            if (activity.count == maxCount && activity.count > 0) primaryColor 
+                            if (activity.count == maxCount && activity.count > 0) primaryColor
                             else primaryColor.copy(alpha = 0.3f),
                             RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
                         )
                 )
                 Spacer(modifier = Modifier.height(12.dp)) // Tăng khoảng cách giữa cột và chữ
                 Text(
-                    text = activity.period, 
-                    fontSize = 12.sp, 
-                    fontFamily = BeVietnamPro, 
+                    text = activity.period,
+                    fontSize = 12.sp,
+                    fontFamily = BeVietnamPro,
                     color = Color.Gray,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
@@ -456,7 +497,7 @@ fun TimeActivityChart(data: List<com.example.minlish.model.TimeActivity>, primar
 @Composable
 fun WordDistributionChart(distribution: com.example.minlish.model.WordStatusDistribution, primaryColor: Color) {
     val total = if (distribution.total > 0) distribution.total.toFloat() else 1f
-    
+
     val masteredWeight = distribution.masteredCount / total
     val reviewWeight = distribution.reviewCount / total
     val newWeight = distribution.newCount / total
@@ -479,9 +520,9 @@ fun WordDistributionChart(distribution: com.example.minlish.model.WordStatusDist
                 Box(modifier = Modifier.fillMaxHeight().weight(if (newWeight > 0) newWeight else 0.001f).background(primaryColor, RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)))
             }
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         // Legend
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             LegendItem("Đã thuộc", Color(0xFF27AE60), distribution.masteredCount)
