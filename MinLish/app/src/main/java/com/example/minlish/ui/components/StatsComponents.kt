@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -58,7 +59,8 @@ fun SimpleBarChart(
     data: List<Int>,
     labels: List<String>,
     modifier: Modifier = Modifier,
-    barColor: Color = Color(0xFF534AB7)
+    barColor: Color = Color(0xFF534AB7),
+    highlightIndex: Int? = null
 ) {
     val maxVal = if (data.isEmpty()) 1 else data.maxOrNull() ?: 1
     
@@ -68,22 +70,24 @@ fun SimpleBarChart(
         verticalAlignment = Alignment.Bottom
     ) {
         data.forEachIndexed { index, value ->
+            val isHighlighted = index == highlightIndex
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     modifier = Modifier
                         .width(24.dp)
                         .height(100.dp * (value.toFloat() / maxVal))
                         .background(
-                            color = if (index == data.size - 1) barColor else barColor.copy(alpha = 0.3f),
+                            color = if (value > 0) (if (isHighlighted) barColor else barColor.copy(alpha = 0.3f)) else Color.Transparent,
                             shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
                         )
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = labels.getOrNull(index) ?: "",
                     fontSize = 10.sp,
                     fontFamily = BeVietnamPro,
-                    color = Color.Gray
+                    fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isHighlighted) barColor else Color.Gray
                 )
             }
         }
@@ -107,10 +111,15 @@ fun RetentionRow(
         Spacer(modifier = Modifier.height(4.dp))
         LinearProgressIndicator(
             progress = { rate / 100f },
-            modifier = Modifier.fillMaxWidth().height(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp)),
             color = color,
             trackColor = color.copy(alpha = 0.1f),
-            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+            strokeCap = androidx.compose.ui.graphics.StrokeCap.Butt,
+            gapSize = 0.dp,
+            drawStopIndicator = {}
         )
     }
 }

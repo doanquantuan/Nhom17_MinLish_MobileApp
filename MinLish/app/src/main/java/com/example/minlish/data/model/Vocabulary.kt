@@ -26,7 +26,8 @@ data class Vocabulary(
     val interval: Int = 0,
     val repetitions: Int = 0,
     val nextReview: Long = System.currentTimeMillis(),
-    val lastReviewed: Long? = null
+    val lastReviewed: Long? = null,
+    val firstReviewedAt: Long? = null
 )
 
 

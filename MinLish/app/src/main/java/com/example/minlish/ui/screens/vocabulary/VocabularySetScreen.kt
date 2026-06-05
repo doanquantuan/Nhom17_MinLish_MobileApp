@@ -334,7 +334,10 @@ fun VocabularySetCard(
                     .height(10.dp)
                     .clip(RoundedCornerShape(5.dp)),
                 color = progressColor,
-                trackColor = Color(0xFFEEEEEE)
+                trackColor = Color(0xFFEEEEEE),
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Butt,
+                gapSize = 0.dp,
+                drawStopIndicator = {}
             )
         }
     }

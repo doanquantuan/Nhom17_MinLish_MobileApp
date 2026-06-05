@@ -79,7 +79,10 @@ fun FlashcardScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = onBack) {
+                        IconButton(onClick = {
+                            viewModel.endSessionEarly()
+                            onBack()
+                        }) {
                             Icon(Icons.Default.Close, contentDescription = "Close", tint = TextGray)
                         }
                         Text(
@@ -154,8 +157,12 @@ fun FlashcardScreen(
                     }
 
                     if (rotated) {
+                        var isProcessing by remember { mutableStateOf(false) }
                         SrsRatingSection(onRate = { quality ->
-                            viewModel.answerWord(quality)
+                            if (!isProcessing) {
+                                isProcessing = true
+                                viewModel.answerWord(quality)
+                            }
                         })
                     } else {
                         Box(

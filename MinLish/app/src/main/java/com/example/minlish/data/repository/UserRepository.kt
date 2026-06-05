@@ -45,4 +45,11 @@ class UserRepository {
             .set(mapOf("reminderTime" to reminderTime), SetOptions.merge())
             .addOnSuccessListener { onSuccess() }
     }
+
+    // Cập nhật trạng thái bật/tắt nhắc nhở
+    fun updateReminderStatus(userId: String, isEnabled: Boolean, onSuccess: () -> Unit) {
+        db.collection("users").document(userId)
+            .set(mapOf("isReminderEnabled" to isEnabled), SetOptions.merge())
+            .addOnSuccessListener { onSuccess() }
+    }
 }

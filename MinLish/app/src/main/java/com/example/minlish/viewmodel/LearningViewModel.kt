@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.Job
 
 class LearningViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
@@ -76,10 +78,14 @@ class LearningViewModel : ViewModel() {
     private val _sessionStats = MutableStateFlow(SessionStats())
     val sessionStats: StateFlow<SessionStats> = _sessionStats.asStateFlow()
 
+    private val wordUpdateJobs = mutableSetOf<Job>()
+
     private var sessionStartTime: Long = 0
     private var currentDeckId: String = ""
     private val _currentStreak = MutableStateFlow(0)
     val currentStreak: StateFlow<Int> = _currentStreak.asStateFlow()
+
+    private var lastAnsweredIndex = -1
 
     init {
         loadRealDecks()
@@ -178,6 +184,7 @@ class LearningViewModel : ViewModel() {
         sessionStartTime = System.currentTimeMillis()
         _currentSessionWords.value = emptyList() 
         _currentIndex.value = 0
+        lastAnsweredIndex = -1
         _isFinished.value = false
         _isLoadingSession.value = true
         
@@ -236,6 +243,7 @@ class LearningViewModel : ViewModel() {
                             repetitions = it.repetitions,
                             nextReview = Date(it.nextReview),
                             lastReviewed = it.lastReviewed?.let { lr -> Date(lr) },
+                            firstReviewedAt = it.firstReviewedAt?.let { fr -> Date(fr) },
                             status = when(it.status) {
                                 "Ôn lại" -> com.example.minlish.model.WordStatus.REVIEW
                                 "Thuộc" -> com.example.minlish.model.WordStatus.MASTERED
@@ -256,10 +264,13 @@ class LearningViewModel : ViewModel() {
     }
 
     fun answerWord(quality: Quality) {
+        if (_isFinished.value) return
+        
         val currentWords = _currentSessionWords.value.toMutableList()
         val index = _currentIndex.value
         
-        if (index < currentWords.size) {
+        if (index < currentWords.size && index > lastAnsweredIndex) {
+            lastAnsweredIndex = index
             val word = currentWords[index]
             val updatedWord = Sm2Algorithm.calculateNextReview(word, quality)
             currentWords[index] = updatedWord
@@ -275,7 +286,7 @@ class LearningViewModel : ViewModel() {
             val result = WordResult(word.word, speedStatus)
             
             // Save to Firestore using a background job that we can track
-            viewModelScope.launch {
+            val job = viewModelScope.launch {
                 try {
                     val originalVocab = vocabRepo.getWordById(updatedWord.id)
                     if (originalVocab != null) {
@@ -291,33 +302,53 @@ class LearningViewModel : ViewModel() {
                             interval = updatedWord.interval,
                             repetitions = updatedWord.repetitions,
                             nextReview = updatedWord.nextReview.time,
-                            lastReviewed = updatedWord.lastReviewed?.time
+                            lastReviewed = updatedWord.lastReviewed?.time,
+                            firstReviewedAt = updatedWord.firstReviewedAt?.time
                         )
                         
                         android.util.Log.d("LearningVM", "SAVING WORD: ${updatedVocab.word} | STATUS: ${updatedVocab.status} | REPS: ${updatedVocab.repetitions}")
                         vocabRepo.updateWord(updatedVocab)
-                        
-                        // Critical: Also update the local decks immediately so the UI doesn't have to wait for refreshData
                         loadRealDecks()
-                        
                         android.util.Log.d("LearningVM", "SAVE SUCCESS: ${updatedVocab.word}")
+                    } else {
+                        android.util.Log.e("LearningVM", "Word not found in repo: ${updatedWord.id}")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("LearningVM", "CRITICAL ERROR SAVING WORD", e)
+                } finally {
+                    // Finalize session if this was the last word - MUST be in finally to avoid getting stuck
+                    if (index + 1 == currentWords.size) {
+                        try {
+                            android.util.Log.d("LearningVM", "Last word reached. Cleaning up...")
+                            
+                            // Wait for other jobs with a timeout to avoid hanging the UI forever
+                            withTimeoutOrNull(5000) {
+                                val otherJobs = wordUpdateJobs.toList()
+                                    .filter { it.isActive && it != coroutineContext[Job] }
+                                for (otherJob in otherJobs) {
+                                    try { otherJob.join() } catch (e: Exception) {}
+                                }
+                            }
 
-                        // Finalize session if this was the last word
-                        if (index + 1 == currentWords.size) {
                             val durationMs = System.currentTimeMillis() - sessionStartTime
                             val durationSeconds = (durationMs / 1000).toInt()
                             _sessionStats.value = _sessionStats.value.copy(totalTimeSeconds = durationSeconds)
                             
-                            saveSessionToFirestore()
-                            loadCurrentStreak() // Refresh streak after saving
+                            withTimeoutOrNull(3000) {
+                                saveSessionToFirestore()
+                            }
+                            loadCurrentStreak()
                             _isFinished.value = true
-                            loadRealDecks() // Explicitly refresh decks locally
+                            loadRealDecks()
+                        } catch (e: Exception) {
+                            android.util.Log.e("LearningVM", "Error finalizing session", e)
+                            _isFinished.value = true // Ensure we navigate away even on error
                         }
                     }
-                } catch (e: Exception) {
-                    android.util.Log.e("LearningVM", "CRITICAL ERROR SAVING WORD", e)
                 }
             }
+            wordUpdateJobs.add(job)
+            job.invokeOnCompletion { wordUpdateJobs.remove(job) }
 
             val currentStats = _sessionStats.value
             val newStats = currentStats.copy(
@@ -329,6 +360,46 @@ class LearningViewModel : ViewModel() {
 
             if (index + 1 < currentWords.size) {
                 _currentIndex.value = index + 1
+            }
+        }
+    }
+
+    fun endSessionEarly() {
+        if (_isFinished.value) return
+        
+        viewModelScope.launch {
+            try {
+                android.util.Log.d("LearningVM", "Ending session early. Waiting for ${wordUpdateJobs.size} jobs...")
+                // Wait for any pending word updates to complete with timeout
+                withTimeoutOrNull(3000) {
+                    val activeJobs = wordUpdateJobs.toList().filter { it.isActive }
+                    for (activeJob in activeJobs) {
+                        try { activeJob.join() } catch (e: Exception) {}
+                    }
+                }
+                
+                // Only save session if we actually answered some words
+                val answeredCount = _sessionStats.value.correctCount + _sessionStats.value.againCount
+                if (answeredCount > 0) {
+                    val durationMs = System.currentTimeMillis() - sessionStartTime
+                    val durationSeconds = (durationMs / 1000).toInt()
+                    
+                    _sessionStats.value = _sessionStats.value.copy(
+                        totalCards = answeredCount,
+                        totalTimeSeconds = durationSeconds
+                    )
+                    
+                    withTimeoutOrNull(3000) {
+                        saveSessionToFirestore()
+                    }
+                    loadCurrentStreak()
+                }
+                
+                _isFinished.value = true
+                loadRealDecks()
+            } catch (e: Exception) {
+                android.util.Log.e("LearningVM", "Error ending session early", e)
+                _isFinished.value = true // Still set to true to trigger refresh
             }
         }
     }

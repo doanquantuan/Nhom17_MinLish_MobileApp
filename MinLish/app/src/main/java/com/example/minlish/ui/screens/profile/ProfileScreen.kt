@@ -27,7 +27,6 @@ import com.example.minlish.viewmodel.AuthViewModel
 fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = viewModel()) {
     val primaryPurple = Color(0xFF534AB7)
     val lightGrayBg = Color(0xFFF5F5F5)
-    var isReminderEnabled by remember { mutableStateOf(true) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -107,13 +106,17 @@ fun ProfileScreen(navController: NavController, authViewModel: AuthViewModel = v
 
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(text = "Nhắc nhở hàng ngày", fontSize = 16.sp, fontFamily = BeVietnamPro, color = Color.DarkGray)
-                        Switch(checked = isReminderEnabled, onCheckedChange = { isReminderEnabled = it }, colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = primaryPurple))
+                        Switch(
+                            checked = authViewModel.isReminderEnabled,
+                            onCheckedChange = { authViewModel.updateReminderStatus(context, it) },
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = primaryPurple)
+                        )
                     }
                     HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
                     SettingRow(
                         label = "Giờ nhắc", 
                         value = authViewModel.userReminderTime,
-                        onClick = { if (isReminderEnabled) showTimePicker = true }
+                        onClick = { if (authViewModel.isReminderEnabled) showTimePicker = true }
                     )
                 }
             }

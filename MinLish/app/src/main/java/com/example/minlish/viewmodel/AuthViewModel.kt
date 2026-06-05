@@ -34,6 +34,7 @@ class AuthViewModel : ViewModel() {
     var userLevel by mutableStateOf("Đang tải...")
     var userWordsPerDay by mutableIntStateOf(0)
     var userReminderTime by mutableStateOf("20:00")
+    var isReminderEnabled by mutableStateOf(true)
     var isEditingName by mutableStateOf(false)
 
     init {
@@ -167,11 +168,16 @@ class AuthViewModel : ViewModel() {
                     userLevel = it.split(" ").firstOrNull() ?: it
                 }
                 document.getLong("wordsPerDay")?.let { userWordsPerDay = it.toInt() }
+                document.getBoolean("isReminderEnabled")?.let { isReminderEnabled = it }
                 document.getString("reminderTime")?.let { 
                     userReminderTime = it 
-                    // Tự động lập lịch khi tải profile xong
+                    // Tự động lập lịch khi tải profile xong nếu đang bật nhắc nhở
                     context?.let { ctx ->
-                        ReminderManager.scheduleReminder(ctx, userReminderTime)
+                        if (isReminderEnabled) {
+                            ReminderManager.scheduleReminder(ctx, userReminderTime)
+                        } else {
+                            ReminderManager.cancelReminder(ctx)
+                        }
                     }
                 }
             }
@@ -192,8 +198,23 @@ class AuthViewModel : ViewModel() {
         val uid = authRepo.getCurrentUser()?.uid ?: return
         userRepo.updateReminderTime(uid, newTime) {
             userReminderTime = newTime
-            // Cập nhật lại lịch nhắc nhở
-            ReminderManager.scheduleReminder(context, newTime)
+            // Cập nhật lại lịch nhắc nhở nếu đang bật
+            if (isReminderEnabled) {
+                ReminderManager.scheduleReminder(context, newTime)
+            }
+        }
+    }
+
+    // LOGIC BẬT/TẮT NHẮC NHỞ
+    fun updateReminderStatus(context: Context, isEnabled: Boolean) {
+        val uid = authRepo.getCurrentUser()?.uid ?: return
+        userRepo.updateReminderStatus(uid, isEnabled) {
+            isReminderEnabled = isEnabled
+            if (isEnabled) {
+                ReminderManager.scheduleReminder(context, userReminderTime)
+            } else {
+                ReminderManager.cancelReminder(context)
+            }
         }
     }
 

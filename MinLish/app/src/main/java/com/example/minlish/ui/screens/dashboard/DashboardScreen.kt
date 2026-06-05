@@ -62,6 +62,7 @@ fun DashboardScreen(
             viewModel.refreshData()
             vocabViewModel.loadVocabularySets()
             learningViewModel.loadRealDecks()
+            learningViewModel.resetFinishedStatus()
         }
     }
 
@@ -414,7 +415,8 @@ fun StatisticsContent(data: com.example.minlish.model.StatisticsData, primaryCol
             SimpleBarChart(
                 data = data.weeklyActivity.map { it.wordsCount },
                 labels = data.weeklyActivity.map { it.day },
-                barColor = primaryColor
+                barColor = primaryColor,
+                highlightIndex = data.weeklyActivity.indexOfFirst { it.isToday }.takeIf { it != -1 }
             )
             Spacer(modifier = Modifier.height(32.dp))
         }

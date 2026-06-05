@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
@@ -64,10 +65,13 @@ fun OnboardingScreen(navController: NavController, authViewModel: AuthViewModel 
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
-                .height(6.dp),
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp)),
             color = primaryPurple,
             trackColor = Color(0xFFE0E0E0),
-            strokeCap = StrokeCap.Round
+            strokeCap = StrokeCap.Butt,
+            gapSize = 0.dp,
+            drawStopIndicator = {}
         )
 
         Spacer(modifier = Modifier.height(24.dp))

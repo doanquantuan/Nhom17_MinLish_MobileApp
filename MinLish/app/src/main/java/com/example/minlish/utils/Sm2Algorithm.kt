@@ -13,6 +13,7 @@ object Sm2Algorithm {
         var i = word.interval
         
         val q = quality.value
+        val isFirstTime = word.repetitions == 0
 
         if (q >= 2) {
             if (n == 0) {
@@ -51,6 +52,7 @@ object Sm2Algorithm {
             interval = i,
             nextReview = calendar.time,
             lastReviewed = Date(),
+            firstReviewedAt = word.firstReviewedAt ?: if (isFirstTime) Date() else null,
             status = if (q < 2) WordStatus.REVIEW
                      else WordStatus.MASTERED
         )

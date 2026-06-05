@@ -19,6 +19,7 @@ data class VocabWord(
     val repetitions: Int = 0,
     val nextReview: Date = Date(),
     val lastReviewed: Date? = null,
+    val firstReviewedAt: Date? = null,
     val status: WordStatus = WordStatus.NEW
 )
 

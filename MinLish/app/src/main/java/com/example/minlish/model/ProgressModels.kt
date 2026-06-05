@@ -9,7 +9,8 @@ data class UserStats(
 
 data class DailyActivity(
     val day: String, // T2, T3, T4...
-    val wordsCount: Int
+    val wordsCount: Int,
+    val isToday: Boolean = false
 )
 
 data class DeckRetention(

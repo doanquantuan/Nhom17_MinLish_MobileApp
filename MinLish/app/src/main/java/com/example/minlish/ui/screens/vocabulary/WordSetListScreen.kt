@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -215,10 +216,13 @@ fun DeckCard(deck: VocabDeck, onHocMoi: () -> Unit, onOnTap: () -> Unit) {
                 progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(4.dp),
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp)),
                 color = Color(0xFF27AE60),
                 trackColor = Color(0xFFEEEEEE),
-                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Butt,
+                gapSize = 0.dp,
+                drawStopIndicator = {}
             )
             
             Spacer(modifier = Modifier.height(16.dp))

@@ -99,15 +99,28 @@ class DashboardViewModel : ViewModel() {
                 
                 val now = System.currentTimeMillis()
 
+                android.util.Log.d("DashboardVM", "DATE RANGE: startOfToday=$startOfToday, now=$now")
+                
                 val newLearnedToday = allWords.count { 
-                    it.lastReviewed != null && 
-                    it.lastReviewed >= startOfToday && 
-                    it.repetitions == 1 
+                    val fr = it.firstReviewedAt
+                    val isNewToday = fr != null && fr >= startOfToday
+                    if (isNewToday) {
+                        android.util.Log.d("DashboardVM", "NEW TODAY: ${it.word} firstReviewedAt=$fr")
+                    }
+                    isNewToday
                 }
                 
                 val dueToReview = allWords.count {
                     it.repetitions > 0 && it.nextReview <= now
                 }
+
+                val reviewedToday = allWords.count {
+                    val lr = it.lastReviewed
+                    val fr = it.firstReviewedAt
+                    lr != null && lr >= startOfToday && fr != null && fr < startOfToday
+                }
+
+                val totalReviewDue = reviewedToday + dueToReview
                 
                 // Aggregate Stats
                 val totalWordsLearned = allWords.count { it.status == "Thuộc" }
@@ -137,7 +150,7 @@ class DashboardViewModel : ViewModel() {
 
                 _dashboardData.value = DashboardData(
                     userStats = userStats,
-                    dailyPlan = "Học mới: $newLearnedToday/$userGoal\nÔn tập: $dueToReview",
+                    dailyPlan = "Học mới: $newLearnedToday/$userGoal\nÔn tập: $reviewedToday/$totalReviewDue",
                     wordSets = deckRetentions
                 )
 
@@ -185,6 +198,7 @@ class DashboardViewModel : ViewModel() {
                 )
 
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 android.util.Log.e("DashboardVM", "Error refreshing data", e)
             } finally {
                 _isLoading.value = false
@@ -250,31 +264,42 @@ class DashboardViewModel : ViewModel() {
     }
 
     private fun calculateWeeklyActivity(sessions: List<StudySession>): List<DailyActivity> {
-        val days = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
         val cal = Calendar.getInstance()
+        val currentDayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+
+        // Set to Monday of this week
+        cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
         
-        val dayIndexMap = mapOf(
-            Calendar.MONDAY to 0,
-            Calendar.TUESDAY to 1,
-            Calendar.WEDNESDAY to 2,
-            Calendar.THURSDAY to 3,
-            Calendar.FRIDAY to 4,
-            Calendar.SATURDAY to 5,
-            Calendar.SUNDAY to 6
-        )
-
-        val last7DaysCounts = IntArray(7) { 0 }
-        val now = System.currentTimeMillis()
-        val sevenDaysAgo = now - TimeUnit.DAYS.toMillis(7)
-
-        sessions.filter { it.timestamp >= sevenDaysAgo }.forEach { session ->
-            cal.timeInMillis = session.timestamp
-            val dayIdx = dayIndexMap[cal.get(Calendar.DAY_OF_WEEK)] ?: 0
-            last7DaysCounts[dayIdx] += session.cardsStudied
+        // Handle Sunday if it's the start of the week in locale but we want Monday
+        if (currentDayOfWeek == Calendar.SUNDAY) {
+            cal.add(Calendar.DATE, -6)
         }
 
-        return days.mapIndexed { index, day ->
-            DailyActivity(day, last7DaysCounts[index])
+        val mondayMillis = cal.timeInMillis
+        val weeklyCounts = IntArray(7) { 0 }
+        val labels = listOf("2", "3", "4", "5", "6", "7", "CN")
+        val todayIdx = if (currentDayOfWeek == Calendar.SUNDAY) 6 else currentDayOfWeek - Calendar.MONDAY
+
+        // Calculate counts and labels for Mon-Sun
+        for (i in 0..6) {
+            val dayStart = mondayMillis + i * TimeUnit.DAYS.toMillis(1)
+            val dayEnd = dayStart + TimeUnit.DAYS.toMillis(1)
+            
+            weeklyCounts[i] = sessions.filter { 
+                it.timestamp in dayStart until dayEnd 
+            }.sumOf { it.cardsStudied }
+        }
+
+        return labels.mapIndexed { index, label ->
+            DailyActivity(
+                day = label,
+                wordsCount = weeklyCounts[index],
+                isToday = index == todayIdx
+            )
         }
     }
 
