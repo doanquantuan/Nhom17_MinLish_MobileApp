@@ -9,8 +9,6 @@ data class Vocabulary(
     val pronunciation: String = "",
     val meaning: String = "",
 
-
-    val description: String = "",
     val example: String = "",
 
     val collocation: String = "",

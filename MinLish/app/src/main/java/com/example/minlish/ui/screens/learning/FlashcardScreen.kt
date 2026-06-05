@@ -219,7 +219,6 @@ fun FlashcardBack(word: VocabWord) {
         FlashcardField(label = "Meaning", value = word.meaning)
         FlashcardField(label = "Type", value = word.partOfSpeech)
         FlashcardField(label = "Pronunciation", value = word.phonetic)
-        FlashcardField(label = "Description", value = word.description)
         FlashcardField(label = "Example", value = word.example)
         FlashcardField(label = "Collocation", value = word.collocation)
         FlashcardField(label = "Note", value = word.note)

@@ -227,7 +227,6 @@ class LearningViewModel : ViewModel() {
                             phonetic = it.pronunciation,
                             partOfSpeech = it.wordType,
                             meaning = it.meaning,
-                            description = it.description,
                             example = it.example,
                             collocation = it.collocation,
                             note = it.note,
