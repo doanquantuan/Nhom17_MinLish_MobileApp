@@ -61,9 +61,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application), T
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val words = vocabRepo.getWordsBySet(setId)
+                // Lọc chính xác theo trạng thái: Đã thuộc hoặc Đang ôn tập (Ôn lại)
+                val allWordsInSet = vocabRepo.getWordsBySet(setId)
+                val words = allWordsInSet.filter { 
+                    it.status == "Thuộc" || it.status == "Thuoc" || 
+                    it.status == "Ôn lại" || it.status == "On lai" 
+                }
+                
                 if (words.size < 2) {
                     _isLoading.value = false
+                    // Có thể thêm thông báo cho người dùng ở đây nếu cần
                     return@launch
                 }
 
@@ -144,7 +151,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application), T
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val words = vocabRepo.getWordsBySet(setId).shuffled().take(totalPairs)
+                // Lọc chính xác theo trạng thái: Đã thuộc hoặc Đang ôn tập (Ôn lại)
+                val allWordsInSet = vocabRepo.getWordsBySet(setId)
+                val learnedWords = allWordsInSet.filter { 
+                    it.status == "Thuộc" || it.status == "Thuoc" || 
+                    it.status == "Ôn lại" || it.status == "On lai" 
+                }
+                
+                val words = learnedWords.shuffled().take(totalPairs)
                 val allCards = mutableListOf<MatchingCard>()
                 
                 words.forEach { word ->

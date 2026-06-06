@@ -147,46 +147,84 @@ fun MatchingResultContent(
             .background(Color.White)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween // Dãn đều nội dung
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
+        // Phần 1: Icon và Lời chúc (Giảm kích thước)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(top = 48.dp)
+            modifier = Modifier.padding(top = 24.dp) // Đẩy sát lên trên hơn
         ) {
             Box(
-                modifier = Modifier.size(140.dp).background(primaryColor.copy(alpha = 0.1f), CircleShape),
+                modifier = Modifier
+                    .size(120.dp) // Giảm từ 160dp
+                    .background(primaryColor.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Check, contentDescription = null, tint = primaryColor, modifier = Modifier.size(80.dp))
+                Icon(
+                    imageVector = Icons.Default.Check, 
+                    contentDescription = null, 
+                    tint = primaryColor, 
+                    modifier = Modifier.size(70.dp) // Giảm từ 90dp
+                )
             }
-            Spacer(modifier = Modifier.height(32.dp))
-            Text("Tuyệt vời!", color = Color.Black, fontSize = 36.sp, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
-            Text("Bạn đã hoàn thành trò chơi", color = Color.Gray, fontSize = 16.sp, fontFamily = BeVietnamPro)
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Tuyệt vời!", 
+                color = Color.Black, 
+                fontSize = 28.sp, // Giảm từ 36sp
+                fontWeight = FontWeight.Bold, 
+                fontFamily = BeVietnamPro
+            )
+            Text(
+                text = "Bạn đã hoàn thành trò chơi", 
+                color = Color.Gray, 
+                fontSize = 14.sp, 
+                fontFamily = BeVietnamPro
+            )
         }
         
-        Column(modifier = Modifier.fillMaxWidth()) {
+        // Phần 2: Bảng chỉ số (Stats) - Đẩy lên cao và tăng kích thước
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
-                "THỐNG KÊ CHI TIẾT", 
-                color = Color.Gray, 
-                fontSize = 12.sp, 
+                "THÔNG SỐ TRÒ CHƠI", // Đổi tên
+                color = Color.Gray.copy(alpha = 0.6f), 
+                fontSize = 13.sp, 
                 fontWeight = FontWeight.Bold, 
                 fontFamily = BeVietnamPro,
-                modifier = Modifier.padding(bottom = 16.dp).align(Alignment.CenterHorizontally)
+                letterSpacing = 1.2.sp
             )
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ResultStatCard("Đúng", matches.toString(), Color(0xFF27AE60), Modifier.weight(1f))
-                ResultStatCard("Sai", errors.toString(), Color(0xFFE74C3C), Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(), 
+                horizontalArrangement = Arrangement.spacedBy(16.dp) // Tăng khoảng cách
+            ) {
+                // Các StatCard sẽ to hơn do padding và font bên trong ResultStatCard
+                ResultStatCard("Chính xác", matches.toString(), Color(0xFF27AE60), Modifier.weight(1f))
+                ResultStatCard("Số lỗi", errors.toString(), Color(0xFFE74C3C), Modifier.weight(1f))
                 ResultStatCard("Thời gian", timeStr, primaryColor, Modifier.weight(1.2f))
             }
         }
 
+        // Phần 3: Nút hành động
         Button(
             onClick = onFinish,
-            modifier = Modifier.fillMaxWidth().height(60.dp).padding(bottom = 24.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = primaryColor)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp),
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
         ) {
-            Text("Quay lại màn hình học", color = Color.White, fontFamily = BeVietnamPro, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(
+                "Quay lại màn hình học", 
+                color = Color.White, 
+                fontFamily = BeVietnamPro, 
+                fontWeight = FontWeight.Bold, 
+                fontSize = 16.sp
+            )
         }
     }
 }
@@ -196,15 +234,29 @@ fun ResultStatCard(label: String, value: String, color: Color, modifier: Modifie
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.05f)),
-        shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.1f))
+        shape = RoundedCornerShape(20.dp), // Tăng bo góc
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, color.copy(alpha = 0.15f)) // Viền rõ hơn
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.padding(vertical = 20.dp, horizontal = 8.dp), // Tăng padding dọc để card to hơn
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(text = value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = color)
-            Text(text = label, fontSize = 12.sp, color = Color.Gray, fontFamily = BeVietnamPro)
+            Text(
+                text = value, 
+                fontSize = 22.sp, // Tăng kích thước giá trị
+                fontWeight = FontWeight.ExtraBold, 
+                color = color,
+                fontFamily = BeVietnamPro
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = label, 
+                fontSize = 12.sp, 
+                color = Color.Gray, 
+                fontFamily = BeVietnamPro,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }

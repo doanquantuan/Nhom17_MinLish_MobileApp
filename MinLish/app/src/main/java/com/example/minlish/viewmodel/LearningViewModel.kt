@@ -152,8 +152,9 @@ class LearningViewModel : ViewModel() {
                 val vocabDecks = sets.map { set ->
                     val allSetWords = vocabRepo.getWordsBySet(set.id)
                     val total = allSetWords.size
-                    val toReview = allSetWords.count { it.repetitions > 0 } // Any word studied is in review pool
-                    val learned = allSetWords.count { it.status == "Thuộc" }
+                    // Chỉ đếm những từ đang ở trạng thái "Ôn lại" để không bị trùng với "Thuộc"
+                    val toReview = allSetWords.count { it.status == "Ôn lại" || it.status == "On lai" }
+                    val learned = allSetWords.count { it.status == "Thuộc" || it.status == "Thuoc" }
 
                     VocabDeck(
                         id = set.id,
