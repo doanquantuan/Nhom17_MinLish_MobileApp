@@ -24,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.example.minlish.model.Quality
 import com.example.minlish.model.VocabWord
 import com.example.minlish.ui.theme.*
+import com.example.minlish.ui.screens.auth.BeVietnamPro
 import com.example.minlish.viewmodel.LearningViewModel
 
 @Composable
@@ -75,6 +76,7 @@ fun FlashcardScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .statusBarsPadding() // Thêm padding cho thanh trạng thái
                             .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -83,12 +85,13 @@ fun FlashcardScreen(
                             viewModel.endSessionEarly()
                             onBack()
                         }) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = TextGray)
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White.copy(alpha = 0.7f))
                         }
                         Text(
                             "${currentIndex + 1} / ${words.size} từ",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextGray
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontFamily = BeVietnamPro
                         )
                         Spacer(modifier = Modifier.width(48.dp))
                     }

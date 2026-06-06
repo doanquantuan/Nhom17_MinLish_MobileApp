@@ -1,14 +1,17 @@
 package com.example.minlish.ui.screens.vocabulary
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,24 +23,134 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.minlish.model.VocabDeck
 import com.example.minlish.ui.theme.*
+import com.example.minlish.ui.screens.auth.BeVietnamPro
 import com.example.minlish.viewmodel.LearningViewModel
 import com.example.minlish.viewmodel.DeckFilterMode
 
 @Composable
 fun WordSetListScreen(
     onNavigateToFlashcard: (String, Boolean) -> Unit,
+    onNavigateToQuiz: (String, Int) -> Unit = { _, _ -> },
+    onNavigateToMatching: (String, Int) -> Unit = { _, _ -> },
     viewModel: LearningViewModel = viewModel()
 ) {
     val decks by viewModel.filteredDecks.collectAsState()
     val filterMode by viewModel.filterMode.collectAsState()
     val totalToReview by viewModel.totalWordsToReview.collectAsState()
 
+    var showQuizDialog by remember { mutableStateOf(false) }
+    var showMatchingDialog by remember { mutableStateOf(false) }
+    var selectedDeckForGame by remember { mutableStateOf<VocabDeck?>(null) }
+
+    if (showQuizDialog && selectedDeckForGame != null) {
+        GameConfigDialog(
+            title = "Cấu hình bài Quiz",
+            maxQuestions = selectedDeckForGame!!.totalWords,
+            onDismiss = { showQuizDialog = false },
+            onConfirm = { count ->
+                showQuizDialog = false
+                onNavigateToQuiz(selectedDeckForGame!!.id, count)
+            }
+        )
+    }
+
+    if (showMatchingDialog && selectedDeckForGame != null) {
+        GameConfigDialog(
+            title = "Cấu hình trò chơi nối thẻ",
+            maxQuestions = selectedDeckForGame!!.totalWords,
+            onDismiss = { showMatchingDialog = false },
+            onConfirm = { count ->
+                showMatchingDialog = false
+                onNavigateToMatching(selectedDeckForGame!!.id, count)
+            }
+        )
+    }
+
     WordSetListContent(
         decks = decks,
         filterMode = filterMode,
         totalToReview = totalToReview,
         onFilterChange = { viewModel.setFilterMode(it) },
-        onNavigateToFlashcard = onNavigateToFlashcard
+        onNavigateToFlashcard = onNavigateToFlashcard,
+        onQuizClick = { deck ->
+            selectedDeckForGame = deck
+            showQuizDialog = true
+        },
+        onMatchingClick = { deck ->
+            selectedDeckForGame = deck
+            showMatchingDialog = true
+        }
+    )
+}
+
+@Composable
+fun GameConfigDialog(
+    title: String,
+    maxQuestions: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var count by remember { mutableFloatStateOf(minOf(10f, maxQuestions.toFloat())) }
+    val primaryPurple = Color(0xFF534AB7)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                title,
+                fontFamily = BeVietnamPro,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    "Chọn số lượng từ (tối đa $maxQuestions):",
+                    fontFamily = BeVietnamPro,
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Text(
+                    text = "${count.toInt()} từ vựng",
+                    fontFamily = BeVietnamPro,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = primaryPurple,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+                
+                Slider(
+                    value = count,
+                    onValueChange = { count = it },
+                    valueRange = 1f..maxQuestions.toFloat(),
+                    steps = if (maxQuestions > 1) maxQuestions - 2 else 0,
+                    colors = SliderDefaults.colors(
+                        thumbColor = primaryPurple,
+                        activeTrackColor = primaryPurple,
+                        inactiveTrackColor = primaryPurple.copy(alpha = 0.2f)
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(count.toInt()) },
+                colors = ButtonDefaults.buttonColors(containerColor = primaryPurple),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Bắt đầu học", fontFamily = BeVietnamPro)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Hủy", color = Color.Gray, fontFamily = BeVietnamPro)
+            }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(16.dp)
     )
 }
 
@@ -47,7 +160,9 @@ fun WordSetListContent(
     filterMode: DeckFilterMode,
     totalToReview: Int,
     onFilterChange: (DeckFilterMode) -> Unit,
-    onNavigateToFlashcard: (String, Boolean) -> Unit
+    onNavigateToFlashcard: (String, Boolean) -> Unit,
+    onQuizClick: (VocabDeck) -> Unit = {},
+    onMatchingClick: (VocabDeck) -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -122,7 +237,9 @@ fun WordSetListContent(
                 DeckCard(
                     deck = deck,
                     onHocMoi = { onNavigateToFlashcard(deck.id, false) },
-                    onOnTap = { onNavigateToFlashcard(deck.id, true) }
+                    onOnTap = { onNavigateToFlashcard(deck.id, true) },
+                    onQuizClick = { onQuizClick(deck) },
+                    onMatchingClick = { onMatchingClick(deck) }
                 )
             }
             
@@ -172,7 +289,13 @@ fun DailyPlanCard(reviewCount: Int, onReviewNow: () -> Unit) {
 }
 
 @Composable
-fun DeckCard(deck: VocabDeck, onHocMoi: () -> Unit, onOnTap: () -> Unit) {
+fun DeckCard(
+    deck: VocabDeck, 
+    onHocMoi: () -> Unit, 
+    onOnTap: () -> Unit,
+    onQuizClick: () -> Unit = {},
+    onMatchingClick: () -> Unit = {}
+) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -200,12 +323,15 @@ fun DeckCard(deck: VocabDeck, onHocMoi: () -> Unit, onOnTap: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .background(Color(0xFFEEEDFE), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(deck.status, color = Color(0xFF534AB7), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFFEEEDFE), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(deck.status, color = Color(0xFF534AB7), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
             
@@ -229,7 +355,8 @@ fun DeckCard(deck: VocabDeck, onHocMoi: () -> Unit, onOnTap: () -> Unit) {
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
                     onClick = onHocMoi,
@@ -246,6 +373,29 @@ fun DeckCard(deck: VocabDeck, onHocMoi: () -> Unit, onOnTap: () -> Unit) {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("Ôn tập", color = Color(0xFF534AB7))
+                }
+                
+                IconButton(
+                    onClick = onQuizClick,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Quiz, 
+                        contentDescription = "Quiz", 
+                        tint = Color(0xFF534AB7),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                IconButton(
+                    onClick = onMatchingClick,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Extension, 
+                        contentDescription = "Matching", 
+                        tint = Color(0xFF534AB7),
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
         }

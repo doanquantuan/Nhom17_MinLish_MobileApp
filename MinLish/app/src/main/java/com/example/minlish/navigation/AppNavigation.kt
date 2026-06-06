@@ -16,6 +16,8 @@ import com.example.minlish.ui.screens.learning.SrsReviewScreen
 import com.example.minlish.ui.screens.notification.NotificationScreen
 import com.example.minlish.ui.screens.vocabulary.WordSetListScreen
 import com.example.minlish.ui.screens.vocabulary.*
+import com.example.minlish.ui.screens.game.QuizScreen
+import com.example.minlish.ui.screens.game.MatchingScreen
 import com.example.minlish.viewmodel.LearningViewModel
 import com.google.firebase.auth.FirebaseAuth
 
@@ -103,6 +105,12 @@ fun AppNavigation() {
                     learningViewModel.startSession(deckId, isReview)
                     navController.navigate("flashcard")
                 },
+                onNavigateToQuiz = { deckId, questionCount ->
+                    navController.navigate("quiz/$deckId/$questionCount")
+                },
+                onNavigateToMatching = { deckId, questionCount ->
+                    navController.navigate("matching/$deckId/$questionCount")
+                },
                 viewModel = learningViewModel
             )
         }
@@ -142,6 +150,30 @@ fun AppNavigation() {
 
         composable("notifications") {
             NotificationScreen(navController)
+        }
+
+        composable(
+            route = "quiz/{setId}/{questionCount}",
+            arguments = listOf(
+                navArgument("setId") { type = NavType.StringType },
+                navArgument("questionCount") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val setId = backStackEntry.arguments?.getString("setId") ?: ""
+            val questionCount = backStackEntry.arguments?.getInt("questionCount") ?: 10
+            QuizScreen(navController, setId, questionCount)
+        }
+
+        composable(
+            route = "matching/{setId}/{questionCount}",
+            arguments = listOf(
+                navArgument("setId") { type = NavType.StringType },
+                navArgument("questionCount") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val setId = backStackEntry.arguments?.getString("setId") ?: ""
+            val questionCount = backStackEntry.arguments?.getInt("questionCount") ?: 10
+            MatchingScreen(navController, setId, questionCount)
         }
     }
 }

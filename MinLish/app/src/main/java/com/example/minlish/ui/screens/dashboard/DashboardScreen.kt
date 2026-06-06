@@ -26,6 +26,7 @@ import com.example.minlish.ui.components.SimpleBarChart
 import com.example.minlish.ui.components.StatCard
 import com.example.minlish.ui.screens.auth.BeVietnamPro
 import com.example.minlish.ui.screens.profile.ProfileScreen
+import com.example.minlish.ui.screens.vocabulary.WordSetListScreen
 import com.example.minlish.ui.screens.vocabulary.VocabularySetScreenContent
 import com.example.minlish.ui.screens.vocabulary.WordSetListContent
 import com.example.minlish.navigation.Routes
@@ -237,15 +238,19 @@ fun DashboardScreen(
                     },
                     bottomBar = {} // BottomBar is managed by DashboardScreen
                 )
-                2 -> WordSetListContent(
-                    decks = filteredDecks,
-                    filterMode = filterMode,
-                    totalToReview = totalToReview,
-                    onFilterChange = { learningViewModel.setFilterMode(it) }
-                ) { deckId, isReview ->
-                    learningViewModel.startSession(deckId, isReview)
-                    navController.navigate("flashcard")
-                }
+                2 -> WordSetListScreen(
+                    onNavigateToFlashcard = { deckId, isReview ->
+                        learningViewModel.startSession(deckId, isReview)
+                        navController.navigate("flashcard")
+                    },
+                    onNavigateToQuiz = { deckId, questionCount ->
+                        navController.navigate("quiz/$deckId/$questionCount")
+                    },
+                    onNavigateToMatching = { deckId, questionCount ->
+                        navController.navigate("matching/$deckId/$questionCount")
+                    },
+                    viewModel = learningViewModel
+                )
                 3 -> StatisticsContent(statsData, primaryPurple)
                 4 -> ProfileScreen(navController)
             }
