@@ -7,7 +7,7 @@ import com.example.minlish.data.repository.NotificationRepository
 import com.example.minlish.data.repository.StatsRepository
 import com.example.minlish.data.repository.VocabularyRepository
 import com.example.minlish.data.repository.VocabularySetRepository
-import com.example.minlish.model.*
+import com.example.minlish.data.model.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,10 +75,11 @@ class DashboardViewModel : ViewModel() {
 
                 val sessions = sessionsDeferred.await()
                 val sets = setsDeferred.await()
-                val allWords = allWordsDeferred.await()
+                val allWordsRaw = allWordsDeferred.await()
+                val allWords = allWordsRaw.distinctBy { it.id }
                 val userDoc = userDocDeferred.await()
                 
-                android.util.Log.d("DashboardVM", "REFRESHING: Found ${sets.size} sets and ${allWords.size} total words")
+                android.util.Log.d("DashboardVM", "REFRESHING: Found ${sets.size} sets and ${allWords.size} unique words (from ${allWordsRaw.size} raw)")
                 allWords.forEach { 
                     if (it.repetitions > 0) {
                         android.util.Log.d("DashboardVM", "WORD STATUS: ${it.word} | STATUS: ${it.status} | REPS: ${it.repetitions}")
@@ -105,7 +106,7 @@ class DashboardViewModel : ViewModel() {
                     val fr = it.firstReviewedAt
                     val isNewToday = fr != null && fr >= startOfToday
                     if (isNewToday) {
-                        android.util.Log.d("DashboardVM", "NEW TODAY: ${it.word} firstReviewedAt=$fr")
+                        android.util.Log.d("DashboardVM", "COUNTED AS NEW TODAY: ${it.word} (ID: ${it.id}) firstReviewedAt=$fr")
                     }
                     isNewToday
                 }
@@ -150,7 +151,14 @@ class DashboardViewModel : ViewModel() {
 
                 _dashboardData.value = DashboardData(
                     userStats = userStats,
-                    dailyPlan = "Học mới: $newLearnedToday/$userGoal\nÔn tập: $reviewedToday/$totalReviewDue",
+                    dailyPlan = DailyPlan(
+                        newWordsTarget = userGoal,
+                        newWordsLearned = newLearnedToday,
+                        reviewWordsCount = totalReviewDue,
+                        reviewWordsDone = reviewedToday,
+                        streak = streak,
+                        accuracy = accuracy.toDouble()
+                    ),
                     wordSets = deckRetentions
                 )
 

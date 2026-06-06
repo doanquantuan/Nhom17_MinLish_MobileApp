@@ -21,8 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.minlish.model.Quality
-import com.example.minlish.model.VocabWord
+import com.example.minlish.data.model.Quality
+import com.example.minlish.data.model.Vocabulary
 import com.example.minlish.ui.theme.*
 import com.example.minlish.ui.screens.auth.BeVietnamPro
 import com.example.minlish.viewmodel.LearningViewModel
@@ -82,8 +82,12 @@ fun FlashcardScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = {
-                            viewModel.endSessionEarly()
-                            onBack()
+                            val answeredCount = viewModel.sessionStats.value.correctCount + viewModel.sessionStats.value.againCount
+                            if (answeredCount == 0) {
+                                onBack()
+                            } else {
+                                viewModel.endSessionEarly()
+                            }
                         }) {
                             Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White.copy(alpha = 0.7f))
                         }
@@ -202,7 +206,7 @@ fun FlashcardScreen(
 }
 
 @Composable
-fun FlashcardFront(word: VocabWord) {
+fun FlashcardFront(word: Vocabulary) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             word.word,
@@ -216,7 +220,7 @@ fun FlashcardFront(word: VocabWord) {
 }
 
 @Composable
-fun FlashcardBack(word: VocabWord) {
+fun FlashcardBack(word: Vocabulary) {
     val scrollState = rememberScrollState()
     Column(
         modifier = Modifier
@@ -227,8 +231,8 @@ fun FlashcardBack(word: VocabWord) {
     ) {
         FlashcardField(label = "Word", value = word.word)
         FlashcardField(label = "Meaning", value = word.meaning)
-        FlashcardField(label = "Type", value = word.partOfSpeech)
-        FlashcardField(label = "Pronunciation", value = word.phonetic)
+        FlashcardField(label = "Type", value = word.wordType)
+        FlashcardField(label = "Pronunciation", value = word.pronunciation)
         FlashcardField(label = "Example", value = word.example)
         FlashcardField(label = "Collocation", value = word.collocation)
         FlashcardField(label = "Note", value = word.note)
@@ -334,9 +338,9 @@ fun SegmentedProgressIndicator(
 @Preview(showBackground = true)
 @Composable
 fun FlashcardPreview() {
-    FlashcardFront(VocabWord(
+    FlashcardFront(Vocabulary(
         word = "ambiguous",
-        phonetic = "/æmˈbɪɡjuəs/",
-        partOfSpeech = "adjective"
+        pronunciation = "/æmˈbɪɡjuəs/",
+        wordType = "adjective"
     ))
 }

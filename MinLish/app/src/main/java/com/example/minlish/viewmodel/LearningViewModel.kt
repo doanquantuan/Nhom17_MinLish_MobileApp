@@ -3,19 +3,17 @@ package com.example.minlish.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.minlish.data.model.StudySession
+import com.example.minlish.data.model.VocabularySet
 import com.example.minlish.data.model.Vocabulary
+import com.example.minlish.data.model.Quality
+import com.example.minlish.data.model.Notification
 import com.example.minlish.data.repository.StatsRepository
 import com.example.minlish.data.repository.VocabularyRepository
 import com.example.minlish.data.repository.VocabularySetRepository
-import com.example.minlish.model.Quality
-import com.example.minlish.model.VocabDeck
-import com.example.minlish.model.VocabWord
+import com.example.minlish.data.repository.NotificationRepository
 import com.example.minlish.utils.Sm2Algorithm
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.example.minlish.data.model.Notification
-import com.example.minlish.data.repository.NotificationRepository
-import java.util.Date
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,8 +32,8 @@ class LearningViewModel : ViewModel() {
     private val setRepo = VocabularySetRepository(db)
     private val notificationRepo = NotificationRepository(db)
 
-    private val _decks = MutableStateFlow<List<VocabDeck>>(emptyList())
-    val decks: StateFlow<List<VocabDeck>> = _decks.asStateFlow()
+    private val _decks = MutableStateFlow<List<VocabularySet>>(emptyList())
+    val decks: StateFlow<List<VocabularySet>> = _decks.asStateFlow()
 
     private val _totalWordsToReview = MutableStateFlow(0)
     val totalWordsToReview: StateFlow<Int> = _totalWordsToReview.asStateFlow()
@@ -47,7 +45,7 @@ class LearningViewModel : ViewModel() {
         when (mode) {
             DeckFilterMode.ALL -> decks
             DeckFilterMode.LEARN_NEW -> decks.filter { deck ->
-                deck.totalWords > deck.wordsToReview
+                deck.totalWords > deck.wordsLearned // Use wordsLearned since totalWords includes all
             }
             DeckFilterMode.REVIEW -> decks.filter { deck ->
                 deck.wordsToReview > 0
@@ -57,14 +55,15 @@ class LearningViewModel : ViewModel() {
 
     fun resetFinishedStatus() {
         _isFinished.value = false
+        loadRealDecks() // Refresh data when returning to dashboard
     }
 
     fun setFilterMode(mode: DeckFilterMode) {
         _filterMode.value = mode
     }
 
-    private val _currentSessionWords = MutableStateFlow<List<VocabWord>>(emptyList())
-    val currentSessionWords: StateFlow<List<VocabWord>> = _currentSessionWords.asStateFlow()
+    private val _currentSessionWords = MutableStateFlow<List<Vocabulary>>(emptyList())
+    val currentSessionWords: StateFlow<List<Vocabulary>> = _currentSessionWords.asStateFlow()
 
     private val _currentIndex = MutableStateFlow(0)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
@@ -152,18 +151,13 @@ class LearningViewModel : ViewModel() {
                 val vocabDecks = sets.map { set ->
                     val allSetWords = vocabRepo.getWordsBySet(set.id)
                     val total = allSetWords.size
-                    // Chỉ đếm những từ đang ở trạng thái "Ôn lại" để không bị trùng với "Thuộc"
                     val toReview = allSetWords.count { it.status == "Ôn lại" || it.status == "On lai" }
                     val learned = allSetWords.count { it.status == "Thuộc" || it.status == "Thuoc" }
 
-                    VocabDeck(
-                        id = set.id,
-                        name = set.title,
+                    set.copy(
                         totalWords = total,
                         wordsToReview = toReview,
-                        wordsLearned = learned,
-                        status = set.category,
-                        colorHex = "#534AB7"
+                        wordsLearned = learned
                     )
                 }
                 _decks.value = vocabDecks
@@ -227,33 +221,8 @@ class LearningViewModel : ViewModel() {
                     _currentSessionWords.value = emptyList()
                     _sessionStats.value = SessionStats(totalCards = 0)
                 } else {
-                    // Convert DB Vocabulary to Learning VocabWord
-                    val sessionWords = filteredWords.map { 
-                        VocabWord(
-                            id = it.id,
-                            word = it.word,
-                            phonetic = it.pronunciation,
-                            partOfSpeech = it.wordType,
-                            meaning = it.meaning,
-                            example = it.example,
-                            collocation = it.collocation,
-                            note = it.note,
-                            deckId = it.setId,
-                            easeFactor = it.easeFactor,
-                            interval = it.interval,
-                            repetitions = it.repetitions,
-                            nextReview = Date(it.nextReview),
-                            lastReviewed = it.lastReviewed?.let { lr -> Date(lr) },
-                            firstReviewedAt = it.firstReviewedAt?.let { fr -> Date(fr) },
-                            status = when(it.status) {
-                                "Ôn lại" -> com.example.minlish.model.WordStatus.REVIEW
-                                "Thuộc" -> com.example.minlish.model.WordStatus.MASTERED
-                                else -> com.example.minlish.model.WordStatus.NEW
-                            }
-                        )
-                    }
-                    _currentSessionWords.value = sessionWords
-                    _sessionStats.value = SessionStats(totalCards = sessionWords.size)
+                    _currentSessionWords.value = filteredWords
+                    _sessionStats.value = SessionStats(totalCards = filteredWords.size)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("LearningVM", "Error starting session", e)
@@ -286,65 +255,17 @@ class LearningViewModel : ViewModel() {
             }
             val result = WordResult(word.word, speedStatus)
             
-            // Save to Firestore using a background job that we can track
+            // Save to Firestore using a background job
             val job = viewModelScope.launch {
                 try {
-                    val originalVocab = vocabRepo.getWordById(updatedWord.id)
-                    if (originalVocab != null) {
-                        val newStatus = when {
-                            updatedWord.status == com.example.minlish.model.WordStatus.MASTERED -> "Thuộc"
-                            updatedWord.status == com.example.minlish.model.WordStatus.NEW -> "Mới"
-                            else -> "Ôn lại"
-                        }
-                        
-                        val updatedVocab = originalVocab.copy(
-                            status = newStatus,
-                            easeFactor = updatedWord.easeFactor,
-                            interval = updatedWord.interval,
-                            repetitions = updatedWord.repetitions,
-                            nextReview = updatedWord.nextReview.time,
-                            lastReviewed = updatedWord.lastReviewed?.time,
-                            firstReviewedAt = updatedWord.firstReviewedAt?.time
-                        )
-                        
-                        android.util.Log.d("LearningVM", "SAVING WORD: ${updatedVocab.word} | STATUS: ${updatedVocab.status} | REPS: ${updatedVocab.repetitions}")
-                        vocabRepo.updateWord(updatedVocab)
-                        loadRealDecks()
-                        android.util.Log.d("LearningVM", "SAVE SUCCESS: ${updatedVocab.word}")
-                    } else {
-                        android.util.Log.e("LearningVM", "Word not found in repo: ${updatedWord.id}")
-                    }
+                    vocabRepo.updateWord(updatedWord)
+                    android.util.Log.d("LearningVM", "SAVE SUCCESS: ${updatedWord.word}")
                 } catch (e: Exception) {
                     android.util.Log.e("LearningVM", "CRITICAL ERROR SAVING WORD", e)
                 } finally {
-                    // Finalize session if this was the last word - MUST be in finally to avoid getting stuck
+                    // Finalize session if this was the last word
                     if (index + 1 == currentWords.size) {
-                        try {
-                            android.util.Log.d("LearningVM", "Last word reached. Cleaning up...")
-                            
-                            // Wait for other jobs with a timeout to avoid hanging the UI forever
-                            withTimeoutOrNull(5000) {
-                                val otherJobs = wordUpdateJobs.toList()
-                                    .filter { it.isActive && it != coroutineContext[Job] }
-                                for (otherJob in otherJobs) {
-                                    try { otherJob.join() } catch (e: Exception) {}
-                                }
-                            }
-
-                            val durationMs = System.currentTimeMillis() - sessionStartTime
-                            val durationSeconds = (durationMs / 1000).toInt()
-                            _sessionStats.value = _sessionStats.value.copy(totalTimeSeconds = durationSeconds)
-                            
-                            withTimeoutOrNull(3000) {
-                                saveSessionToFirestore()
-                            }
-                            loadCurrentStreak()
-                            _isFinished.value = true
-                            loadRealDecks()
-                        } catch (e: Exception) {
-                            android.util.Log.e("LearningVM", "Error finalizing session", e)
-                            _isFinished.value = true // Ensure we navigate away even on error
-                        }
+                        finalizeSession()
                     }
                 }
             }
@@ -365,42 +286,63 @@ class LearningViewModel : ViewModel() {
         }
     }
 
+    private fun finalizeSession() {
+        viewModelScope.launch {
+            try {
+                android.util.Log.d("LearningVM", "Finalizing session...")
+                
+                // Wait for other pending word updates with a timeout
+                withTimeoutOrNull(2000) {
+                    val otherJobs = wordUpdateJobs.toList()
+                        .filter { it.isActive && it != coroutineContext[Job] }
+                    for (otherJob in otherJobs) {
+                        try { otherJob.join() } catch (e: Exception) {}
+                    }
+                }
+
+                val durationMs = System.currentTimeMillis() - sessionStartTime
+                _sessionStats.value = _sessionStats.value.copy(totalTimeSeconds = (durationMs / 1000).toInt())
+                
+                saveSessionToFirestore()
+                loadCurrentStreak()
+                _isFinished.value = true
+            } catch (e: Exception) {
+                android.util.Log.e("LearningVM", "Error finalizing session", e)
+                _isFinished.value = true 
+            }
+        }
+    }
+
     fun endSessionEarly() {
         if (_isFinished.value) return
         
         viewModelScope.launch {
             try {
-                android.util.Log.d("LearningVM", "Ending session early. Waiting for ${wordUpdateJobs.size} jobs...")
-                // Wait for any pending word updates to complete with timeout
-                withTimeoutOrNull(3000) {
+                android.util.Log.d("LearningVM", "Ending session early...")
+                // Wait for any pending word updates
+                withTimeoutOrNull(2000) {
                     val activeJobs = wordUpdateJobs.toList().filter { it.isActive }
                     for (activeJob in activeJobs) {
                         try { activeJob.join() } catch (e: Exception) {}
                     }
                 }
                 
-                // Only save session if we actually answered some words
                 val answeredCount = _sessionStats.value.correctCount + _sessionStats.value.againCount
                 if (answeredCount > 0) {
                     val durationMs = System.currentTimeMillis() - sessionStartTime
-                    val durationSeconds = (durationMs / 1000).toInt()
-                    
                     _sessionStats.value = _sessionStats.value.copy(
                         totalCards = answeredCount,
-                        totalTimeSeconds = durationSeconds
+                        totalTimeSeconds = (durationMs / 1000).toInt()
                     )
                     
-                    withTimeoutOrNull(3000) {
-                        saveSessionToFirestore()
-                    }
+                    saveSessionToFirestore()
                     loadCurrentStreak()
+                    _isFinished.value = true
                 }
-                
-                _isFinished.value = true
-                loadRealDecks()
+                // If answeredCount == 0, we don't set _isFinished.value = true
+                // because the UI handles going back directly via onBack()
             } catch (e: Exception) {
                 android.util.Log.e("LearningVM", "Error ending session early", e)
-                _isFinished.value = true // Still set to true to trigger refresh
             }
         }
     }
@@ -432,7 +374,6 @@ class LearningViewModel : ViewModel() {
                 }
             }
 
-            // Tự động tạo thông báo chúc mừng khi hoàn thành bài học
             val notification = Notification(
                 userId = userId,
                 title = "Hoàn thành bài học!",
@@ -442,10 +383,8 @@ class LearningViewModel : ViewModel() {
                 isRead = false
             )
             notificationRepo.addNotification(notification)
-
-            loadRealDecks()
         } catch (e: Exception) {
-            android.util.Log.e("LearningVM", "Error saving session and updating progress", e)
+            android.util.Log.e("LearningVM", "Error saving session", e)
         }
     }
 

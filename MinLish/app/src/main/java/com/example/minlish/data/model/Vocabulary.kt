@@ -30,4 +30,12 @@ data class Vocabulary(
     val firstReviewedAt: Long? = null
 )
 
+enum class WordStatus {
+    NEW, LEARNING, REVIEW, MASTERED
+}
+
+enum class Quality(val value: Int) {
+    AGAIN(0), HARD(1), GOOD(2), EASY(3)
+}
+
 

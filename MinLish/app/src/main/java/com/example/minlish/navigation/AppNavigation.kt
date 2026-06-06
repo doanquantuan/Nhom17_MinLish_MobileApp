@@ -62,8 +62,16 @@ fun AppNavigation() {
             VocabularySetScreen(navController)
         }
 
-        composable(route = Routes.CreateSet.route) {
-            CreateSetScreen(navController)
+        composable(
+            route = Routes.CreateSet.route,
+            arguments = listOf(navArgument("setId") { 
+                type = NavType.StringType
+                defaultValue = "new"
+            })
+        ) { backStackEntry ->
+            val setId = backStackEntry.arguments?.getString("setId")
+            val effectiveSetId = if (setId == "new") null else setId
+            CreateSetScreen(navController = navController, setId = effectiveSetId)
         }
 
         composable(

@@ -1,6 +1,4 @@
-package com.example.minlish.model
-
-import com.example.minlish.data.model.Vocabulary
+package com.example.minlish.data.model
 
 data class QuizQuestion(
     val wordId: String,

@@ -6,7 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.minlish.data.model.Vocabulary
 import com.example.minlish.data.repository.VocabularyRepository
-import com.example.minlish.model.*
+import com.example.minlish.data.model.*
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

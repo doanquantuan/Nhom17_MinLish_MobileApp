@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.minlish.model.VocabDeck
+import com.example.minlish.data.model.VocabularySet
 import com.example.minlish.ui.theme.*
 import com.example.minlish.ui.screens.auth.BeVietnamPro
 import com.example.minlish.viewmodel.LearningViewModel
@@ -41,7 +41,7 @@ fun WordSetListScreen(
 
     var showQuizDialog by remember { mutableStateOf(false) }
     var showMatchingDialog by remember { mutableStateOf(false) }
-    var selectedDeckForGame by remember { mutableStateOf<VocabDeck?>(null) }
+    var selectedDeckForGame by remember { mutableStateOf<VocabularySet?>(null) }
 
     if (showQuizDialog && selectedDeckForGame != null) {
         val maxQuestions = selectedDeckForGame!!.wordsLearned + selectedDeckForGame!!.wordsToReview
@@ -175,13 +175,13 @@ fun GameConfigDialog(
 
 @Composable
 fun WordSetListContent(
-    decks: List<VocabDeck>,
+    decks: List<VocabularySet>,
     filterMode: DeckFilterMode,
     totalToReview: Int,
     onFilterChange: (DeckFilterMode) -> Unit,
     onNavigateToFlashcard: (String, Boolean) -> Unit,
-    onQuizClick: (VocabDeck) -> Unit = {},
-    onMatchingClick: (VocabDeck) -> Unit = {}
+    onQuizClick: (VocabularySet) -> Unit = {},
+    onMatchingClick: (VocabularySet) -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -309,7 +309,7 @@ fun DailyPlanCard(reviewCount: Int, onReviewNow: () -> Unit) {
 
 @Composable
 fun DeckCard(
-    deck: VocabDeck, 
+    deck: VocabularySet, 
     onHocMoi: () -> Unit, 
     onOnTap: () -> Unit,
     onQuizClick: () -> Unit = {},
@@ -328,7 +328,7 @@ fun DeckCard(
             ) {
                 Column {
                     Text(
-                        deck.name,
+                        deck.title,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -349,7 +349,7 @@ fun DeckCard(
                             .background(Color(0xFFEEEDFE), RoundedCornerShape(4.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(deck.status, color = Color(0xFF534AB7), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(deck.category, color = Color(0xFF534AB7), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -431,7 +431,7 @@ fun DailyPlanCardPreview() {
 @Composable
 fun DeckCardPreview() {
     DeckCard(
-        deck = VocabDeck("1", "IELTS Academic", 120, 14, 45, "IELTS", "#5A4FCF"),
+        deck = VocabularySet(id = "1", title = "IELTS Academic", category = "IELTS", totalWords = 120, wordsLearned = 45, wordsToReview = 14),
         onHocMoi = {},
         onOnTap = {}
     )

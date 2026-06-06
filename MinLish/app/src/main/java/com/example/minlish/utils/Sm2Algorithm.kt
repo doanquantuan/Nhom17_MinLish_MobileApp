@@ -1,13 +1,11 @@
 package com.example.minlish.utils
 
-import com.example.minlish.model.Quality
-import com.example.minlish.model.VocabWord
-import com.example.minlish.model.WordStatus
+import com.example.minlish.data.model.Quality
+import com.example.minlish.data.model.Vocabulary
 import java.util.Calendar
-import java.util.Date
 
 object Sm2Algorithm {
-    fun calculateNextReview(word: VocabWord, quality: Quality): VocabWord {
+    fun calculateNextReview(word: Vocabulary, quality: Quality): Vocabulary {
         var n = word.repetitions
         var ef = word.easeFactor
         var i = word.interval
@@ -24,12 +22,11 @@ object Sm2Algorithm {
                 i = (i * ef).toInt()
             }
             n++
-        } else if (q == 1) {
-            i = 1
         } else {
-            // Quality.AGAIN: reset progress but keep in Review cycle
-            n = 1
-            i = 1
+            // Quality.AGAIN or Quality.HARD:
+            // Graduation: any review should mark it as no longer "Brand New" (n=0)
+            n = if (n == 0) 1 else n // Always at least 1 if it was 0
+            i = 1 // Review tomorrow
         }
 
         val mappedQ = when(quality) {
@@ -43,18 +40,19 @@ object Sm2Algorithm {
         if (ef < 1.3) ef = 1.3
 
         val calendar = Calendar.getInstance()
-        calendar.time = Date()
+        calendar.timeInMillis = System.currentTimeMillis()
         calendar.add(Calendar.DAY_OF_YEAR, i)
+        
+        val newStatus = if (q < 2) "Ôn lại" else "Thuộc"
         
         return word.copy(
             repetitions = n,
             easeFactor = ef,
             interval = i,
-            nextReview = calendar.time,
-            lastReviewed = Date(),
-            firstReviewedAt = word.firstReviewedAt ?: if (isFirstTime) Date() else null,
-            status = if (q < 2) WordStatus.REVIEW
-                     else WordStatus.MASTERED
+            nextReview = calendar.timeInMillis,
+            lastReviewed = System.currentTimeMillis(),
+            firstReviewedAt = word.firstReviewedAt ?: if (isFirstTime) System.currentTimeMillis() else null,
+            status = newStatus
         )
     }
 }

@@ -1,4 +1,4 @@
-package com.example.minlish.model
+package com.example.minlish.data.model
 
 data class UserStats(
     val wordsLearned: Int = 0,
@@ -23,7 +23,7 @@ data class DeckRetention(
 
 data class DashboardData(
     val userStats: UserStats = UserStats(),
-    val dailyPlan: String = "Đang tải dữ liệu...",
+    val dailyPlan: DailyPlan = DailyPlan(),
     val wordSets: List<DeckRetention> = emptyList()
 )
 

@@ -6,7 +6,11 @@ sealed class Routes(val route: String) {
         Routes("vocabulary_set")
 
     object CreateSet :
-        Routes("create_set")
+        Routes("create_set/{setId}") {
+        fun passSetId(setId: String = "new"): String {
+            return "create_set/$setId"
+        }
+    }
 
     object VocabularyList :
         Routes("vocabulary_list/{setId}") {

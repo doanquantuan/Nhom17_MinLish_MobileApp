@@ -91,13 +91,13 @@ fun VocabularyListScreen(
             item {
                 if (vocabularies.isNotEmpty()) {
                     val learned = vocabularies.count { it.status == "Thuộc" }
-                    val reviewing = vocabularies.count { it.status == "Ôn lại" }
-                    val newWords = vocabularies.count { it.status == "Mới" }
+                    val needsReview = vocabularies.count { it.status == "Ôn lại" }
+                    val total = vocabularies.size
                     
                     StatsSection(
+                        total = total,
+                        needsReview = needsReview,
                         learned = learned,
-                        reviewing = reviewing,
-                        newWords = newWords,
                         modifier = Modifier.padding(top = 24.dp)
                     )
                 }
@@ -187,7 +187,7 @@ fun VocabularyHeader(
 }
 
 @Composable
-fun StatsSection(learned: Int, reviewing: Int, newWords: Int, modifier: Modifier = Modifier) {
+fun StatsSection(total: Int, needsReview: Int, learned: Int, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -195,24 +195,24 @@ fun StatsSection(learned: Int, reviewing: Int, newWords: Int, modifier: Modifier
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StatCard(
-            count = learned,
-            label = "Đã thuộc",
-            color = Color(0xFFE8F5E9),
-            textColor = Color(0xFF2E7D32),
+            count = total,
+            label = "Tổng từ",
+            color = Color(0xFFE8EAF6),
+            textColor = Color(0xFF3F51B5),
             modifier = Modifier.weight(1f)
         )
         StatCard(
-            count = reviewing,
-            label = "Đang ôn",
+            count = needsReview,
+            label = "Cần ôn",
             color = Color(0xFFFFF3E0),
             textColor = Color(0xFFEF6C00),
             modifier = Modifier.weight(1f)
         )
         StatCard(
-            count = newWords,
-            label = "Từ mới",
-            color = Color(0xFFE3F2FD),
-            textColor = Color(0xFF1565C0),
+            count = learned,
+            label = "Đã thuộc",
+            color = Color(0xFFE8F5E9),
+            textColor = Color(0xFF2E7D32),
             modifier = Modifier.weight(1f)
         )
     }
@@ -221,16 +221,29 @@ fun StatsSection(learned: Int, reviewing: Int, newWords: Int, modifier: Modifier
 @Composable
 fun StatCard(count: Int, label: String, color: Color, textColor: Color, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier,
+        modifier = modifier.height(110.dp),
         colors = CardDefaults.cardColors(containerColor = color),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(text = count.toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = textColor)
-            Text(text = label, fontSize = 12.sp, color = textColor.copy(alpha = 0.7f))
+            Text(
+                text = count.toString(),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = label,
+                fontSize = 14.sp,
+                color = textColor.copy(alpha = 0.8f)
+            )
         }
     }
 }
@@ -246,24 +259,22 @@ fun SearchAndAddRow(query: String, onQueryChange: (String) -> Unit, onAddClick: 
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text("Tìm kiếm từ vựng...") },
+            placeholder = { Text("Tìm từ...") },
             modifier = Modifier.weight(1f),
             shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF5145B1),
+                focusedBorderColor = Color(0xFFE0E0E0),
                 unfocusedBorderColor = Color(0xFFE0E0E0)
             )
         )
         Spacer(modifier = Modifier.width(12.dp))
         Button(
             onClick = onAddClick,
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.width(100.dp).height(56.dp),
             shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-            contentPadding = PaddingValues(0.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5145B1))
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add")
+            Text("Thêm", color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -297,37 +308,86 @@ fun VocabularyItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (vocab.wordType.isNotBlank()) {
                         Text(
-                            text = vocab.wordType,
-                            color = Color.Gray,
-                            fontWeight = FontWeight.Normal
+                            text = "(${vocab.wordType}) ",
+                            fontSize = 16.sp,
+                            color = Color(0xFF5145B1),
+                            fontWeight = FontWeight.Medium
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text(
                         text = vocab.meaning,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Normal
+                        fontSize = 18.sp,
+                        color = Color.Gray
                     )
                 }
             }
 
-            IconButton(
-                onClick = onPronounceClick,
-                modifier = Modifier.size(32.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.VolumeUp,
-                    contentDescription = "Pronounce",
-                    tint = Color(0xFF5145B1)
-                )
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    StatusTag(status = vocab.status)
+                    if (vocab.status != "Mới") {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = formatNextReviewTime(vocab.nextReview),
+                            fontSize = 11.sp,
+                            color = if (vocab.nextReview <= System.currentTimeMillis()) Color(0xFFEF6C00) else Color.Gray,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = BeVietnamPro
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = onPronounceClick,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_volume_up),
+                        contentDescription = "Pronounce",
+                        tint = Color.Black,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
         }
     }
 }
 
 fun formatNextReviewTime(nextReview: Long): String {
-    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-    return sdf.format(Date(nextReview))
+    val now = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    
+    val reviewDate = Calendar.getInstance().apply {
+        timeInMillis = nextReview
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val diff = reviewDate - now
+    val days = (diff / (1000 * 60 * 60 * 24)).toInt()
+
+    return when {
+        days < 0 -> "Cần ôn ngay"
+        days == 0 -> "Hôm nay"
+        days == 1 -> "Ngày mai"
+        days < 30 -> "$days ngày nữa"
+        else -> {
+            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            sdf.format(Date(nextReview))
+        }
+    }
 }
 
 @Composable
@@ -339,14 +399,16 @@ fun StatusTag(status: String, modifier: Modifier = Modifier) {
     }
     Surface(
         color = color,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
         modifier = modifier
     ) {
         Text(
             text = status,
             color = textColor,
-            fontSize = 10.sp,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = BeVietnamPro,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
     }
 }

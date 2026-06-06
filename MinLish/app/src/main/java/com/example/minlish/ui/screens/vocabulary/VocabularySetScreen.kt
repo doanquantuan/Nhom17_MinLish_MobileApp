@@ -48,9 +48,9 @@ fun VocabularySetScreen(
         vocabularySets = vocabularySets,
         setWordCounts = setWordCounts,
         isLoading = isLoading,
-        onAddSetClick = { navController.navigate(Routes.CreateSet.route) },
+        onAddSetClick = { navController.navigate(Routes.CreateSet.passSetId()) },
         onDeleteSet = { setId -> viewModel.deleteVocabularySet(setId) },
-        onEditSet = { set -> viewModel.updateVocabularySet(set) },
+        onEditSet = { set -> navController.navigate(Routes.CreateSet.passSetId(set.id)) },
         onSetClick = { setId ->
             navController.navigate(Routes.VocabularyList.passSetId(setId))
         },
@@ -275,16 +275,16 @@ fun VocabularySetCard(
                         DropdownMenuItem(
                             text = { Text("Chỉnh sửa") },
                             onClick = {
-                                onEdit(set)
                                 showMenu = false
+                                onEdit(set)
                             },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
                         )
                         DropdownMenuItem(
                             text = { Text("Xóa", color = Color.Red) },
                             onClick = {
-                                onDelete()
                                 showMenu = false
+                                onDelete()
                             },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red) }
                         )

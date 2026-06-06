@@ -23,21 +23,29 @@ import com.example.minlish.viewmodel.VocabularyViewModel
 @Composable
 fun CreateSetScreen(
     navController: NavController,
-    viewModel: VocabularyViewModel = viewModel()
+    viewModel: VocabularyViewModel = viewModel(),
+    setId: String? = null
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
     val vocabularySets by viewModel.vocabularySets.collectAsState()
 
-    val existingCategories = remember(vocabularySets) {
-        vocabularySets.map { it.category }.distinct().filter { it.isNotBlank() }.sorted()
+    val editingSet = remember(setId, vocabularySets) {
+        if (setId != null) vocabularySets.find { it.id == setId } else null
     }
 
     CreateSetContent(
         isLoading = isLoading,
-        existingCategories = existingCategories,
+        editingSet = editingSet,
         onBackClick = { navController.popBackStack() },
         onCreateSet = { title, description, category ->
             viewModel.createVocabularySet(title, description, category) { success ->
+                if (success) {
+                    navController.popBackStack()
+                }
+            }
+        },
+        onUpdateSet = { updatedSet ->
+            viewModel.updateVocabularySet(updatedSet) { success ->
                 if (success) {
                     navController.popBackStack()
                 }
@@ -50,27 +58,24 @@ fun CreateSetScreen(
 @Composable
 fun CreateSetContent(
     isLoading: Boolean,
-    existingCategories: List<String>,
+    editingSet: com.example.minlish.data.model.VocabularySet? = null,
     onBackClick: () -> Unit,
-    onCreateSet: (String, String, String) -> Unit
+    onCreateSet: (String, String, String) -> Unit,
+    onUpdateSet: (com.example.minlish.data.model.VocabularySet) -> Unit = {}
 ) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("") }
+    val categories = listOf("General", "IELTS")
+
+    var title by remember(editingSet) { mutableStateOf(editingSet?.title ?: "") }
+    var description by remember(editingSet) { mutableStateOf(editingSet?.description ?: "") }
+    var selectedCategory by remember(editingSet) { mutableStateOf(editingSet?.category ?: categories[0]) }
     var expanded by remember { mutableStateOf(false) }
 
-    val filteredCategories = remember(selectedCategory, existingCategories) {
-        if (selectedCategory.isEmpty()) {
-            existingCategories
-        } else {
-            existingCategories.filter { it.contains(selectedCategory, ignoreCase = true) }
-        }
-    }
+    val isEditMode = editingSet != null
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Tạo bộ từ mới", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(if (isEditMode) "Chỉnh sửa bộ từ" else "Tạo bộ từ mới", color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -123,43 +128,37 @@ fun CreateSetContent(
 
             Box(modifier = Modifier.fillMaxWidth()) {
                 ExposedDropdownMenuBox(
-                    expanded = expanded && filteredCategories.isNotEmpty(),
+                    expanded = expanded,
                     onExpandedChange = { expanded = it }
                 ) {
                     OutlinedTextField(
                         value = selectedCategory,
-                        onValueChange = {
-                            selectedCategory = it
-                            expanded = true
-                        },
+                        onValueChange = {},
+                        readOnly = true,
                         label = { Text("Chủ đề") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier
-                            .menuAnchor(MenuAnchorType.PrimaryEditable)
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                             .fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        placeholder = { Text("Nhập hoặc chọn chủ đề") },
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Sentences,
-                            autoCorrectEnabled = true,
-                            keyboardType = KeyboardType.Text
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color.LightGray,
+                            focusedBorderColor = Color(0xFF5145B1)
                         )
                     )
 
-                    if (filteredCategories.isNotEmpty()) {
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            filteredCategories.forEach { category ->
-                                DropdownMenuItem(
-                                    text = { Text(category) },
-                                    onClick = {
-                                        selectedCategory = category
-                                        expanded = false
-                                    }
-                                )
-                            }
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category) },
+                                onClick = {
+                                    selectedCategory = category
+                                    expanded = false
+                                }
+                            )
                         }
                     }
                 }
@@ -170,7 +169,15 @@ fun CreateSetContent(
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
-                        onCreateSet(title, description, selectedCategory.ifBlank { "Chung" })
+                        if (isEditMode && editingSet != null) {
+                            onUpdateSet(editingSet.copy(
+                                title = title,
+                                description = description,
+                                category = selectedCategory.ifBlank { "Chung" }
+                            ))
+                        } else {
+                            onCreateSet(title, description, selectedCategory.ifBlank { "Chung" })
+                        }
                     }
                 },
                 modifier = Modifier
@@ -183,7 +190,7 @@ fun CreateSetContent(
                 if (isLoading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                 } else {
-                    Text("Tạo bộ từ", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(if (isEditMode) "Cập nhật bộ từ" else "Tạo bộ từ", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

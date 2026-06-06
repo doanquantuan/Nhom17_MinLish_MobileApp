@@ -1,4 +1,4 @@
-package com.example.minlish.model
+package com.example.minlish.data.model
 
 data class DailyPlan(
     val newWordsTarget: Int = 10,

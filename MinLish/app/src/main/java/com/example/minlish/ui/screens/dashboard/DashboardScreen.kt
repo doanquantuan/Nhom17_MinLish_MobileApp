@@ -46,6 +46,11 @@ fun DashboardScreen(
     initialTab: Int = 0
 ) {
     var selectedTab by remember { mutableIntStateOf(initialTab) }
+    
+    // Sync local tab state with navigation argument
+    LaunchedEffect(initialTab) {
+        selectedTab = initialTab
+    }
     val primaryPurple = Color(0xFF534AB7)
     val dashboardData by viewModel.dashboardData.collectAsState()
     val statsData by viewModel.statsData.collectAsState()
@@ -224,14 +229,13 @@ fun DashboardScreen(
                     vocabularySets = vocabularySets,
                     setWordCounts = setWordCounts,
                     isLoading = isVocabLoading,
-                    onAddSetClick = { navController.navigate(Routes.CreateSet.route) },
+                    onAddSetClick = { navController.navigate(Routes.CreateSet.passSetId()) },
                     onDeleteSet = { setId: String ->
                         vocabViewModel.deleteVocabularySet(setId)
                         viewModel.refreshData()
                     },
                     onEditSet = { set: VocabularySet ->
-                        vocabViewModel.updateVocabularySet(set)
-                        viewModel.refreshData()
+                        navController.navigate(Routes.CreateSet.passSetId(set.id))
                     },
                     onSetClick = { setId ->
                         navController.navigate(Routes.VocabularyList.passSetId(setId))
@@ -260,7 +264,7 @@ fun DashboardScreen(
 
 @Composable
 fun HomeContent(
-    data: com.example.minlish.model.DashboardData,
+    data: com.example.minlish.data.model.DashboardData,
     primaryColor: Color,
     displayName: String,
     onStartLearning: () -> Unit,
@@ -331,7 +335,8 @@ fun HomeContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = "Hôm nay", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = BeVietnamPro)
-                        Text(text = data.dailyPlan, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
+                        val planText = "Học mới: ${data.dailyPlan.newWordsLearned}/${data.dailyPlan.newWordsTarget}\nÔn tập: ${data.dailyPlan.reviewWordsDone}/${data.dailyPlan.reviewWordsCount}"
+                        Text(text = planText, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
                     }
                     Button(
                         onClick = onStartLearning,
@@ -403,7 +408,7 @@ fun HomeContent(
 }
 
 @Composable
-fun StatisticsContent(data: com.example.minlish.model.StatisticsData, primaryColor: Color) {
+fun StatisticsContent(data: com.example.minlish.data.model.StatisticsData, primaryColor: Color) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -462,7 +467,7 @@ fun StatisticsContent(data: com.example.minlish.model.StatisticsData, primaryCol
 }
 
 @Composable
-fun TimeActivityChart(data: List<com.example.minlish.model.TimeActivity>, primaryColor: Color) {
+fun TimeActivityChart(data: List<com.example.minlish.data.model.TimeActivity>, primaryColor: Color) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -502,7 +507,7 @@ fun TimeActivityChart(data: List<com.example.minlish.model.TimeActivity>, primar
 }
 
 @Composable
-fun WordDistributionChart(distribution: com.example.minlish.model.WordStatusDistribution, primaryColor: Color) {
+fun WordDistributionChart(distribution: com.example.minlish.data.model.WordStatusDistribution, primaryColor: Color) {
     val total = if (distribution.total > 0) distribution.total.toFloat() else 1f
 
     val masteredWeight = distribution.masteredCount / total

@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.minlish.model.MatchingCard
+import com.example.minlish.data.model.MatchingCard
 import com.example.minlish.ui.screens.auth.BeVietnamPro
 import com.example.minlish.viewmodel.GameViewModel
 
@@ -198,13 +198,13 @@ fun MatchingResultContent(
             )
             Spacer(modifier = Modifier.height(24.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(), 
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min), 
                 horizontalArrangement = Arrangement.spacedBy(16.dp) // Tăng khoảng cách
             ) {
                 // Các StatCard sẽ to hơn do padding và font bên trong ResultStatCard
-                ResultStatCard("Chính xác", matches.toString(), Color(0xFF27AE60), Modifier.weight(1f))
-                ResultStatCard("Số lỗi", errors.toString(), Color(0xFFE74C3C), Modifier.weight(1f))
-                ResultStatCard("Thời gian", timeStr, primaryColor, Modifier.weight(1.2f))
+                ResultStatCard("Chính xác", matches.toString(), Color(0xFF27AE60), Modifier.weight(1f).fillMaxHeight())
+                ResultStatCard("Số lỗi", errors.toString(), Color(0xFFE74C3C), Modifier.weight(1f).fillMaxHeight())
+                ResultStatCard("Thời gian", timeStr, primaryColor, Modifier.weight(1.2f).fillMaxHeight())
             }
         }
 
@@ -238,7 +238,9 @@ fun ResultStatCard(label: String, value: String, color: Color, modifier: Modifie
         border = androidx.compose.foundation.BorderStroke(1.5.dp, color.copy(alpha = 0.15f)) // Viền rõ hơn
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 20.dp, horizontal = 8.dp), // Tăng padding dọc để card to hơn
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(vertical = 20.dp, horizontal = 8.dp), // Tăng padding dọc để card to hơn
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {

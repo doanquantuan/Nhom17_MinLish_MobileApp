@@ -150,7 +150,7 @@ fun QuizScreen(
 
                             // Giữ chỗ cho loa để vị trí chữ không bị nhảy
                             Box(modifier = Modifier.height(60.dp), contentAlignment = Alignment.Center) {
-                                if (quizSession!!.questions[currentIndex].direction == com.example.minlish.model.QuizDirection.EN_TO_VI) {
+                                if (quizSession!!.questions[currentIndex].direction == com.example.minlish.data.model.QuizDirection.EN_TO_VI) {
                                     IconButton(onClick = { viewModel.speak(quizSession!!.questions[currentIndex].questionText) }) {
                                         Icon(Icons.Default.VolumeUp, contentDescription = null, tint = primaryPurple, modifier = Modifier.size(32.dp))
                                     }
@@ -207,7 +207,7 @@ fun QuizScreen(
 
 @Composable
 fun QuizReviewContent(
-    session: com.example.minlish.model.QuizSession, 
+    session: com.example.minlish.data.model.QuizSession,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
