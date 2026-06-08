@@ -2,6 +2,7 @@ package com.example.minlish.ui.screens.dashboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,20 +23,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.example.minlish.ui.components.RetentionRow
 import com.example.minlish.ui.components.SimpleBarChart
-import com.example.minlish.ui.components.StatCard
+import com.example.minlish.ui.components.StatCard as DashboardStatCard
 import com.example.minlish.ui.screens.auth.BeVietnamPro
 import com.example.minlish.ui.screens.profile.ProfileScreen
 import com.example.minlish.ui.screens.vocabulary.WordSetListScreen
 import com.example.minlish.ui.screens.vocabulary.VocabularySetScreenContent
-import com.example.minlish.ui.screens.vocabulary.WordSetListContent
 import com.example.minlish.navigation.Routes
 import com.example.minlish.data.model.VocabularySet
+import com.example.minlish.data.model.DashboardData
+import com.example.minlish.data.model.StatisticsData
+import com.example.minlish.data.model.TimeActivity
+import com.example.minlish.data.model.WordStatusDistribution
 import com.example.minlish.viewmodel.AuthViewModel
 import com.example.minlish.viewmodel.DashboardViewModel
 import com.example.minlish.viewmodel.LearningViewModel
 import com.example.minlish.viewmodel.VocabularyViewModel
+import com.example.minlish.viewmodel.GameViewModel
 
 @Composable
 fun DashboardScreen(
@@ -43,6 +52,7 @@ fun DashboardScreen(
     vocabViewModel: VocabularyViewModel = viewModel(),
     learningViewModel: LearningViewModel = viewModel(),
     authViewModel: AuthViewModel = viewModel(),
+    gameViewModel: GameViewModel = viewModel(),
     initialTab: Int = 0
 ) {
     var selectedTab by remember { mutableIntStateOf(initialTab) }
@@ -62,20 +72,45 @@ fun DashboardScreen(
 
     // Dashboard state refresh
     val isFinished by learningViewModel.isFinished.collectAsState()
-    LaunchedEffect(isFinished) {
-        if (isFinished) {
+    val quizSession by gameViewModel.quizSession.collectAsState()
+    val matchingSession by gameViewModel.matchingSession.collectAsState()
+    
+    val isQuizFinished = quizSession?.isFinished == true
+    val isMatchingFinished = matchingSession?.isFinished == true
+
+    LaunchedEffect(isFinished, isQuizFinished, isMatchingFinished) {
+        if (isFinished || isQuizFinished || isMatchingFinished) {
             android.util.Log.d("DashboardScreen", "SESSION FINISHED - TRIGGERING REFRESH")
             viewModel.refreshData()
             vocabViewModel.loadVocabularySets()
             learningViewModel.loadRealDecks()
-            learningViewModel.resetFinishedStatus()
+            
+            if (isFinished) learningViewModel.resetFinishedStatus()
+            if (isQuizFinished || isMatchingFinished) gameViewModel.resetFinishedStatus()
+        }
+    }
+
+    // Refresh when returning to dashboard
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                android.util.Log.d("DashboardScreen", "ON_RESUME - TRIGGERING REFRESH")
+                viewModel.refreshData()
+                if (selectedTab == 1) vocabViewModel.loadVocabularySets()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
     // Initial load and tab change load
     LaunchedEffect(selectedTab) {
         when (selectedTab) {
-            0 -> {
+            0, 3 -> {
+                android.util.Log.d("DashboardScreen", "TAB CHANGED TO $selectedTab - REFRESHING DATA")
                 viewModel.refreshData()
             }
             1 -> vocabViewModel.loadVocabularySets()
@@ -264,7 +299,7 @@ fun DashboardScreen(
 
 @Composable
 fun HomeContent(
-    data: com.example.minlish.data.model.DashboardData,
+    data: DashboardData,
     primaryColor: Color,
     displayName: String,
     onStartLearning: () -> Unit,
@@ -288,15 +323,33 @@ fun HomeContent(
                     Text(text = "$displayName 👋", fontFamily = BeVietnamPro, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onNavigateToNotifications) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clickable(
+                                onClick = onNavigateToNotifications,
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(bounded = false, radius = 20.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
                         BadgedBox(
                             badge = {
                                 if (unreadCount > 0) {
                                     Badge(
                                         containerColor = Color.Red,
-                                        contentColor = Color.White
+                                        contentColor = Color.White,
+                                        modifier = Modifier
+                                            .offset(x = 4.dp, y = (-4).dp)
+                                            .sizeIn(minWidth = 16.dp, minHeight = 16.dp)
                                     ) {
-                                        Text(text = if (unreadCount > 99) "99+" else unreadCount.toString())
+                                        Text(
+                                            text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                                            fontSize = 10.sp,
+                                            fontFamily = BeVietnamPro,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 3.dp)
+                                        )
                                     }
                                 }
                             }
@@ -324,37 +377,10 @@ fun HomeContent(
         }
 
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = primaryColor),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Hôm nay", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = BeVietnamPro)
-                        val planText = "Học mới: ${data.dailyPlan.newWordsLearned}/${data.dailyPlan.newWordsTarget}\nÔn tập: ${data.dailyPlan.reviewWordsDone}/${data.dailyPlan.reviewWordsCount}"
-                        Text(text = planText, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = BeVietnamPro)
-                    }
-                    Button(
-                        onClick = onStartLearning,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.2f)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(text = "Học ngay", color = Color.White, fontFamily = BeVietnamPro)
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-
-        item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(label = "TỪ ĐÃ HỌC", value = data.userStats.wordsLearned.toString(), modifier = Modifier.weight(1f), valueColor = primaryColor)
-                StatCard(
-                    label = "STREAK",
+                DashboardStatCard(label = "TỪ ĐÃ HỌC", value = data.userStats.wordsLearned.toString(), modifier = Modifier.weight(1f), valueColor = primaryColor)
+                DashboardStatCard(
+                    label = "CHUỖI HỌC",
                     value = data.userStats.streak.toString(),
                     modifier = Modifier.weight(1f),
                     valueColor = Color(0xFFE67E22),
@@ -363,8 +389,8 @@ fun HomeContent(
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(label = "ACCURACY", value = "${data.userStats.accuracy}%", modifier = Modifier.weight(1f), valueColor = Color(0xFF27AE60))
-                StatCard(label = "LEVEL", value = data.userStats.level, modifier = Modifier.weight(1f))
+                DashboardStatCard(label = "CHÍNH XÁC", value = "${data.userStats.accuracy}%", modifier = Modifier.weight(1f), valueColor = Color(0xFF27AE60))
+                DashboardStatCard(label = "CẤP ĐỘ", value = data.userStats.level, modifier = Modifier.weight(1f))
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -408,7 +434,7 @@ fun HomeContent(
 }
 
 @Composable
-fun StatisticsContent(data: com.example.minlish.data.model.StatisticsData, primaryColor: Color) {
+fun StatisticsContent(data: StatisticsData, primaryColor: Color) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -426,7 +452,10 @@ fun StatisticsContent(data: com.example.minlish.data.model.StatisticsData, prima
                 data = data.weeklyActivity.map { it.wordsCount },
                 labels = data.weeklyActivity.map { it.day },
                 barColor = primaryColor,
-                highlightIndex = data.weeklyActivity.indexOfFirst { it.isToday }.takeIf { it != -1 }
+                highlightIndex = let {
+                    val index = data.weeklyActivity.indexOfFirst { it.isToday == true }
+                    if (index != -1) index else null
+                }
             )
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -447,14 +476,14 @@ fun StatisticsContent(data: com.example.minlish.data.model.StatisticsData, prima
 
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(
+                DashboardStatCard(
                     label = "TỔNG PHIÊN HỌC",
                     value = data.totalSessions.toString(),
                     modifier = Modifier.weight(1f),
                     backgroundColor = primaryColor.copy(alpha = 0.05f),
                     valueColor = primaryColor
                 )
-                StatCard(
+                DashboardStatCard(
                     label = "THỜI GIAN HỌC",
                     value = data.totalStudyTime,
                     modifier = Modifier.weight(1f),
@@ -467,7 +496,7 @@ fun StatisticsContent(data: com.example.minlish.data.model.StatisticsData, prima
 }
 
 @Composable
-fun TimeActivityChart(data: List<com.example.minlish.data.model.TimeActivity>, primaryColor: Color) {
+fun TimeActivityChart(data: List<TimeActivity>, primaryColor: Color) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -507,7 +536,7 @@ fun TimeActivityChart(data: List<com.example.minlish.data.model.TimeActivity>, p
 }
 
 @Composable
-fun WordDistributionChart(distribution: com.example.minlish.data.model.WordStatusDistribution, primaryColor: Color) {
+fun WordDistributionChart(distribution: WordStatusDistribution, primaryColor: Color) {
     val total = if (distribution.total > 0) distribution.total.toFloat() else 1f
 
     val masteredWeight = distribution.masteredCount / total

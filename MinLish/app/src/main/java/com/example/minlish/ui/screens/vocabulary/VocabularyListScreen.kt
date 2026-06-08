@@ -92,10 +92,10 @@ fun VocabularyListScreen(
                 if (vocabularies.isNotEmpty()) {
                     val learned = vocabularies.count { it.status == "Thuộc" }
                     val needsReview = vocabularies.count { it.status == "Ôn lại" }
-                    val total = vocabularies.size
+                    val newWords = vocabularies.count { it.status == "Mới" }
                     
                     StatsSection(
-                        total = total,
+                        newWords = newWords,
                         needsReview = needsReview,
                         learned = learned,
                         modifier = Modifier.padding(top = 24.dp)
@@ -187,7 +187,7 @@ fun VocabularyHeader(
 }
 
 @Composable
-fun StatsSection(total: Int, needsReview: Int, learned: Int, modifier: Modifier = Modifier) {
+fun StatsSection(newWords: Int, needsReview: Int, learned: Int, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -195,8 +195,8 @@ fun StatsSection(total: Int, needsReview: Int, learned: Int, modifier: Modifier 
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StatCard(
-            count = total,
-            label = "Tổng từ",
+            count = newWords,
+            label = "Từ mới",
             color = Color(0xFFE8EAF6),
             textColor = Color(0xFF3F51B5),
             modifier = Modifier.weight(1f)

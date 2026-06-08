@@ -31,7 +31,8 @@ data class QuizSession(
     val questions: List<QuizQuestion>,
     var currentIndex: Int = 0,
     var score: Int = 0,
-    val userAnswers: MutableList<String?> = mutableListOf()
+    val userAnswers: MutableList<String?> = mutableListOf(),
+    val isFinished: Boolean = false
 )
 
 data class MatchingSession(

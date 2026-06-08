@@ -200,7 +200,7 @@ class DashboardViewModel : ViewModel() {
                     categoryFocus = categoryFocus,
                     statusDistribution = distribution,
                     totalSessions = sessions.size,
-                    totalStudyTime = "${sessions.sumOf { it.durationMinutes }}m",
+                    totalStudyTime = "${sessions.sumOf { it.durationMinutes }} phút",
                     averageAccuracy = accuracy,
                     currentStreak = streak
                 )

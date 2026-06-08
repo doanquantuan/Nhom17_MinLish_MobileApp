@@ -186,6 +186,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application), T
         
         val newScore = if (answer == currentQ.correctAnswer) session.score + 1 else session.score
         val nextIndex = session.currentIndex + 1
+        val isFinished = nextIndex >= session.questions.size
 
         // Ghi lại câu trả lời của người dùng
         session.userAnswers.add(if (answer.isEmpty()) null else answer)
@@ -193,8 +194,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application), T
         _currentQuestionIndex.value = nextIndex
         _quizSession.value = session.copy(
             currentIndex = nextIndex,
-            score = newScore
+            score = newScore,
+            isFinished = isFinished
         )
+    }
+
+    fun resetFinishedStatus() {
+        _quizSession.value = _quizSession.value?.copy(isFinished = false)
+        _matchingSession.value = _matchingSession.value?.copy(isFinished = false)
     }
 
     private fun setupNextRound() {
