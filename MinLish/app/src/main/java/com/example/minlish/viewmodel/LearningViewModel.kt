@@ -55,7 +55,11 @@ class LearningViewModel : ViewModel() {
 
     fun resetFinishedStatus() {
         _isFinished.value = false
-        loadRealDecks() // Refresh data when returning to dashboard
+        loadRealDecks() // Làm mới dữ liệu khi quay lại dashboard
+    }
+
+    fun refreshDecks() {
+        loadRealDecks()
     }
 
     fun setFilterMode(mode: DeckFilterMode) {

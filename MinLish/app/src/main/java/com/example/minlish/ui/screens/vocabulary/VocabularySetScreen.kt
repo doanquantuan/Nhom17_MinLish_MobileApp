@@ -25,11 +25,11 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.minlish.data.model.VocabularySet
 import com.example.minlish.navigation.Routes
+import com.example.minlish.ui.components.*
 import com.example.minlish.viewmodel.VocabularyViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VocabularySetScreen(
     navController: NavController,
@@ -40,7 +40,6 @@ fun VocabularySetScreen(
     val isLoading by viewModel.isLoading.collectAsState()
 
     LaunchedEffect(Unit) {
-        android.util.Log.d("VocabSetScreen", "Refreshing vocabulary sets")
         viewModel.loadVocabularySets()
     }
 
@@ -54,11 +53,10 @@ fun VocabularySetScreen(
         onSetClick = { setId ->
             navController.navigate(Routes.VocabularyList.passSetId(setId))
         },
-        bottomBar = { MinLishBottomNavigation(navController) }
+        bottomBar = {}
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VocabularySetScreenContent(
     vocabularySets: List<VocabularySet>,
@@ -71,8 +69,8 @@ fun VocabularySetScreenContent(
     bottomBar: @Composable () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var setToDelete by remember { mutableStateOf<VocabularySet?>(null) }
 
-    // Dynamic categories
     val dynamicCategories = remember(vocabularySets) {
         listOf("Tất cả") + vocabularySets.map { it.category }.distinct().sorted()
     }
@@ -83,24 +81,21 @@ fun VocabularySetScreenContent(
                 it.title.contains(searchQuery, ignoreCase = true)
     }
 
+    if (setToDelete != null) {
+        MinLishConfirmDialog(
+            title = "Xóa bộ từ",
+            message = "Bạn có chắc chắn muốn xóa bộ từ '${setToDelete!!.title}' không? Hành động này không thể hoàn tác.",
+            confirmText = "Xóa",
+            onConfirm = {
+                onDeleteSet(setToDelete!!.id)
+                setToDelete = null
+            },
+            onDismiss = { setToDelete = null }
+        )
+    }
+
     Scaffold(
-        topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
-                    .background(Color(0xFF5145B1)),
-                contentAlignment = Alignment.BottomStart
-            ) {
-                Text(
-                    text = "Bộ từ của tôi",
-                    modifier = Modifier.padding(start = 16.dp, bottom = 16.dp),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 28.sp
-                )
-            }
-        },
+        topBar = { MinLishLargeHeader(title = "Bộ từ của tôi") },
         bottomBar = bottomBar,
         floatingActionButton = {
             FloatingActionButton(
@@ -120,27 +115,18 @@ fun VocabularySetScreenContent(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(16.dp)
         ) {
-            // Search Bar
             item {
-                OutlinedTextField(
+                MinLishTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    placeholder = { Text("Tìm bộ từ...", color = Color.Gray) },
-                    shape = RoundedCornerShape(28.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = Color(0xFFF1F1F1),
-                        focusedContainerColor = Color(0xFFF1F1F1),
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedBorderColor = Color(0xFF5145B1)
-                    ),
-                    singleLine = true
+                    label = "",
+                    placeholder = "Tìm bộ từ...",
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) }
                 )
             }
 
-            // Dynamic Category Chips
             item {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -174,42 +160,27 @@ fun VocabularySetScreenContent(
 
             if (isLoading && filteredSets.isEmpty()) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Color(0xFF5145B1))
                     }
                 }
             } else if (filteredSets.isEmpty()) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                         Text("Không tìm thấy bộ từ nào", color = Color.Gray)
                     }
                 }
             } else {
-                // Vocabulary Set List
                 items(filteredSets) { set ->
                     VocabularySetCard(
                         set = set,
                         wordCount = setWordCounts[set.id] ?: 0,
-                        onDelete = { onDeleteSet(set.id) },
+                        onDelete = { setToDelete = set },
                         onEdit = { onEditSet(it) },
                         onClick = { onSetClick(set.id) }
                     )
                 }
-
-                // Extra padding for FAB
-                item {
-                    Spacer(modifier = Modifier.height(80.dp))
-                }
+                item { Spacer(modifier = Modifier.height(80.dp)) }
             }
         }
     }
@@ -223,16 +194,9 @@ fun VocabularySetCard(
     onEdit: (VocabularySet) -> Unit,
     onClick: () -> Unit
 ) {
-    val progressColor = when (set.category) {
-        "IELTS" -> Color(0xFF5145B1)
-        "Business" -> Color(0xFF006D3C)
-        "Travel" -> Color(0xFFE48C07)
-        else -> Color(0xFF5145B1)
-    }
-
+    val primaryColor = Color(0xFF5145B1)
     val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val lastUpdated = sdf.format(Date(set.updateAt))
-
     var showMenu by remember { mutableStateOf(false) }
 
     Card(
@@ -250,42 +214,22 @@ fun VocabularySetCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = set.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
+                    Text(text = set.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "$wordCount từ · cập nhật $lastUpdated",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
-                    )
+                    Text(text = "$wordCount từ · cập nhật $lastUpdated", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                 }
 
                 Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Menu")
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
+                    IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = null) }
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         DropdownMenuItem(
                             text = { Text("Chỉnh sửa") },
-                            onClick = {
-                                showMenu = false
-                                onEdit(set)
-                            },
+                            onClick = { showMenu = false; onEdit(set) },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
                         )
                         DropdownMenuItem(
                             text = { Text("Xóa", color = Color.Red) },
-                            onClick = {
-                                showMenu = false
-                                onDelete()
-                            },
+                            onClick = { showMenu = false; onDelete() },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red) }
                         )
                     }
@@ -294,14 +238,11 @@ fun VocabularySetCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Surface(
-                color = progressColor.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(12.dp)
-            ) {
+            Surface(color = primaryColor.copy(alpha = 0.1f), shape = RoundedCornerShape(12.dp)) {
                 Text(
                     text = set.category,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    color = progressColor,
+                    color = primaryColor,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -309,31 +250,15 @@ fun VocabularySetCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Tiến độ",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
-                )
-                Text(
-                    text = "${set.progress}%",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = progressColor,
-                    fontWeight = FontWeight.Bold
-                )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Tiến độ", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                Text(text = "${set.progress}%", style = MaterialTheme.typography.bodyMedium, color = primaryColor, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
                 progress = { set.progress / 100f },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(10.dp)
-                    .clip(RoundedCornerShape(5.dp)),
-                color = progressColor,
+                modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)),
+                color = primaryColor,
                 trackColor = Color(0xFFEEEEEE),
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Butt,
                 gapSize = 0.dp,
@@ -342,53 +267,3 @@ fun VocabularySetCard(
         }
     }
 }
-
-@Composable
-fun MinLishBottomNavigation(navController: NavController) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 8.dp
-    ) {
-        val items = listOf(
-            BottomNavItem("Trang chủ", Icons.Default.Home, "dashboard/0"),
-            BottomNavItem("Bộ từ", Icons.AutoMirrored.Filled.MenuBook, "dashboard/1"),
-            BottomNavItem("Học", Icons.Default.Description, "dashboard/2"),
-            BottomNavItem("Thống kê", Icons.Default.BarChart, "dashboard/3"),
-            BottomNavItem("Cá nhân", Icons.Default.Person, "dashboard/4")
-        )
-
-        items.forEach { item ->
-            val isSelected = currentRoute == item.route ||
-                    (item.route == "dashboard/1" && currentRoute == Routes.VocabularySet.route)
-
-            NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = item.title) },
-                label = { Text(item.title, fontSize = 10.sp) },
-                selected = isSelected,
-                onClick = {
-                    if (currentRoute != item.route) {
-                        navController.navigate(item.route) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFF5145B1),
-                    selectedTextColor = Color(0xFF5145B1),
-                    unselectedIconColor = Color.Gray,
-                    unselectedTextColor = Color.Gray,
-                    indicatorColor = Color.Transparent
-                )
-            )
-        }
-    }
-}
-
-data class BottomNavItem(val title: String, val icon: ImageVector, val route: String)

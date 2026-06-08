@@ -2,8 +2,11 @@ package com.example.minlish.navigation
 
 sealed class Routes(val route: String) {
 
-    object VocabularySet :
-        Routes("vocabulary_set")
+    object VocabularySet : Routes("vocabulary_set")
+    object Home : Routes("home")
+    object Study : Routes("study")
+    object Statistics : Routes("statistics")
+    object Profile : Routes("profile")
 
     object CreateSet :
         Routes("create_set/{setId}") {

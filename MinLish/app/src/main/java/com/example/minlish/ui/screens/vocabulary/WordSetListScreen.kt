@@ -44,45 +44,47 @@ fun WordSetListScreen(
     var selectedDeckForGame by remember { mutableStateOf<VocabularySet?>(null) }
 
     if (showQuizDialog && selectedDeckForGame != null) {
-        val maxQuestions = selectedDeckForGame!!.wordsLearned + selectedDeckForGame!!.wordsToReview
-        if (maxQuestions > 0) {
+        val totalWords = selectedDeckForGame!!.totalWords
+        val learnedAndReview = selectedDeckForGame!!.wordsLearned + selectedDeckForGame!!.wordsToReview
+        
+        if (totalWords < 4) {
+            LaunchedEffect(showQuizDialog) {
+                android.widget.Toast.makeText(context, "Bộ từ cần ít nhất 4 từ vựng để có thể làm Quiz!", android.widget.Toast.LENGTH_SHORT).show()
+                showQuizDialog = false
+            }
+        } else if (learnedAndReview < 4) {
+            LaunchedEffect(showQuizDialog) {
+                android.widget.Toast.makeText(context, "Bạn cần hoàn thành học ít nhất 4 từ trong bộ này để làm Quiz!", android.widget.Toast.LENGTH_SHORT).show()
+                showQuizDialog = false
+            }
+        } else {
             GameConfigDialog(
                 title = "Cấu hình bài Quiz",
-                maxQuestions = maxQuestions,
+                maxQuestions = learnedAndReview,
                 onDismiss = { showQuizDialog = false },
                 onConfirm = { count ->
                     showQuizDialog = false
                     onNavigateToQuiz(selectedDeckForGame!!.id, count)
                 }
             )
-        } else {
-            // Thông báo nếu chưa học từ nào
-            LaunchedEffect(showQuizDialog) {
-                android.widget.Toast.makeText(context, "Vui lòng học từ mới trước khi làm Quiz!", android.widget.Toast.LENGTH_SHORT).show()
-                showQuizDialog = false
-            }
         }
     }
 
     if (showMatchingDialog && selectedDeckForGame != null) {
-        val maxQuestions = selectedDeckForGame!!.wordsLearned + selectedDeckForGame!!.wordsToReview
-        if (maxQuestions > 0) {
-            GameConfigDialog(
-                title = "Cấu hình trò chơi nối thẻ",
-                maxQuestions = maxQuestions,
-                onDismiss = { showMatchingDialog = false },
-                onConfirm = { count ->
-                    showMatchingDialog = false
-                    onNavigateToMatching(selectedDeckForGame!!.id, count)
-                }
-            )
-        } else {
-            // Thông báo nếu chưa học từ nào
-            LaunchedEffect(showMatchingDialog) {
-                android.widget.Toast.makeText(context, "Vui lòng học từ mới trước khi chơi nối thẻ!", android.widget.Toast.LENGTH_SHORT).show()
+        val totalWords = selectedDeckForGame!!.totalWords
+        val learnedAndReview = selectedDeckForGame!!.wordsLearned + selectedDeckForGame!!.wordsToReview
+        
+
+        GameConfigDialog(
+            title = "Cấu hình trò chơi nối thẻ",
+            maxQuestions = learnedAndReview,
+            onDismiss = { showMatchingDialog = false },
+            onConfirm = { count ->
                 showMatchingDialog = false
+                onNavigateToMatching(selectedDeckForGame!!.id, count)
             }
-        }
+        )
+
     }
 
     WordSetListContent(

@@ -1,58 +1,39 @@
 package com.example.minlish.ui.screens.vocabulary
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.minlish.R
 import com.example.minlish.data.model.Vocabulary
+import com.example.minlish.ui.components.*
 import com.example.minlish.viewmodel.VocabularyViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddVocabularyScreen(
     navController: NavController,
     setId: String,
     vocabularyId: String? = null,
-    viewModel: VocabularyViewModel = viewModel(),
-    modifier: Modifier = Modifier
+    viewModel: VocabularyViewModel = viewModel()
 ) {
     val currentVocabulary by viewModel.currentVocabulary.collectAsState()
     val vocabList by viewModel.vocabularies.collectAsState()
-
-    var word by remember { mutableStateOf("") }
-    var wordType by remember { mutableStateOf("Noun") }
-    var pronunciation by remember { mutableStateOf("") }
-    var meaning by remember { mutableStateOf("") }
-    var example by remember { mutableStateOf("") }
-    var collocation by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
-    
-    var showDuplicateDialog by remember { mutableStateOf(false) }
-    var duplicateVocab by remember { mutableStateOf<Vocabulary?>(null) }
+    val isLoading by viewModel.isLoading.collectAsState()
 
     LaunchedEffect(setId) {
         viewModel.loadVocabularies(setId)
@@ -63,318 +44,279 @@ fun AddVocabularyScreen(
             viewModel.loadVocabularyById(vocabularyId)
         } else {
             viewModel.clearCurrentVocabulary()
-            word = ""
-            wordType = "Noun"
-            pronunciation = ""
-            meaning = ""
-            example = ""
-            collocation = ""
-            note = ""
         }
     }
 
-    LaunchedEffect(currentVocabulary) {
-        currentVocabulary?.let { vocab ->
-            if (vocabularyId != null && vocab.id == vocabularyId) {
-                word = vocab.word
-                wordType = vocab.wordType
-                pronunciation = vocab.pronunciation
-                meaning = vocab.meaning
-                example = vocab.example
-                collocation = vocab.collocation
-                note = vocab.note
+    AddVocabularyContent(
+        isLoading = isLoading,
+        setId = setId,
+        editingVocab = currentVocabulary,
+        vocabList = vocabList,
+        onBackClick = { navController.popBackStack() },
+        onSaveVocab = { vocab ->
+            if (vocabularyId == null) {
+                viewModel.addVocabulary(vocab) { success ->
+                    if (success) navController.popBackStack()
+                }
+            } else {
+                viewModel.updateVocabulary(vocab) { success ->
+                    if (success) navController.popBackStack()
+                }
             }
-        }
-    }
+        },
+        onDeleteVocab = { vocab ->
+            viewModel.deleteVocabulary(vocab) { success ->
+                if (success) navController.popBackStack()
+            }
+        },
+        onSpeak = { text -> viewModel.speak(text) }
+    )
+}
 
-    val isLoading by viewModel.isLoading.collectAsState()
+@Composable
+fun AddVocabularyContent(
+    isLoading: Boolean,
+    setId: String,
+    editingVocab: Vocabulary?,
+    vocabList: List<Vocabulary>,
+    onBackClick: () -> Unit,
+    onSaveVocab: (Vocabulary) -> Unit,
+    onDeleteVocab: (Vocabulary) -> Unit,
+    onSpeak: (String) -> Unit
+) {
+    var word by remember { mutableStateOf("") }
+    var wordType by remember { mutableStateOf("Noun") }
+    var pronunciation by remember { mutableStateOf("") }
+    var meaning by remember { mutableStateOf("") }
+    var example by remember { mutableStateOf("") }
+    var collocation by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+
+    var wordError by remember { mutableStateOf<String?>(null) }
+    var meaningError by remember { mutableStateOf<String?>(null) }
+    
+    var showDiscardDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showDuplicateDialog by remember { mutableStateOf(false) }
+    var duplicateVocab by remember { mutableStateOf<Vocabulary?>(null) }
+
     val wordTypes = listOf("Noun", "Verb", "Adjective", "Adverb", "Preposition", "Conjunction", "Pronoun", "Interjection")
 
+    val initialValues = remember(editingVocab) {
+        if (editingVocab != null) {
+            Triple(editingVocab.word, editingVocab.meaning, editingVocab.wordType)
+        } else {
+            Triple("", "", "Noun")
+        }
+    }
+
+    LaunchedEffect(editingVocab) {
+        editingVocab?.let {
+            word = it.word
+            wordType = it.wordType
+            pronunciation = it.pronunciation
+            meaning = it.meaning
+            example = it.example
+            collocation = it.collocation
+            note = it.note
+        }
+    }
+
+    val hasChanges = word != initialValues.first || 
+                     meaning != initialValues.second || 
+                     wordType != initialValues.third ||
+                     pronunciation.isNotBlank() || 
+                     example.isNotBlank() || 
+                     collocation.isNotBlank() || 
+                     note.isNotBlank()
+
+    val handleBack = { if (hasChanges && !isLoading) showDiscardDialog = true else onBackClick() }
+    BackHandler(enabled = hasChanges && !isLoading, onBack = handleBack)
+
+    // --- Dialogs ---
+    if (showDiscardDialog) {
+        MinLishConfirmDialog(
+            title = "Hủy thay đổi?",
+            message = "Bạn có những thay đổi chưa được lưu. Bạn có chắc chắn muốn thoát không?",
+            confirmText = "Thoát",
+            onConfirm = onBackClick,
+            onDismiss = { showDiscardDialog = false }
+        )
+    }
+
+    if (showDeleteDialog && editingVocab != null) {
+        MinLishConfirmDialog(
+            title = "Xóa từ vựng",
+            message = "Bạn có chắc chắn muốn xóa từ '${editingVocab.word}' không?",
+            confirmText = "Xóa",
+            onConfirm = { onDeleteVocab(editingVocab) },
+            onDismiss = { showDeleteDialog = false }
+        )
+    }
+
     if (showDuplicateDialog && duplicateVocab != null) {
-        AlertDialog(
-            onDismissRequest = { showDuplicateDialog = false },
-            title = { Text("Từ vựng đã tồn tại") },
-            text = { Text("Từ '${word}' đã có trong bộ từ này. Bạn có muốn cập nhật thông tin cho từ này không?") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val updatedVocab = duplicateVocab!!.copy(
-                            word = word,
-                            wordType = wordType,
-                            pronunciation = pronunciation,
-                            meaning = meaning,
-                            example = example,
-                            collocation = collocation,
-                            note = note
-                        )
-                        viewModel.updateVocabulary(updatedVocab) { success ->
-                            if (success) {
-                                showDuplicateDialog = false
-                                navController.popBackStack()
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5145B1))
-                ) {
-                    Text("Thay thế")
-                }
+        MinLishConfirmDialog(
+            title = "Từ vựng đã tồn tại",
+            message = "Từ '${word}' đã có trong bộ từ này. Bạn có muốn cập nhật thông tin cho từ này không?",
+            confirmText = "Cập nhật",
+            onConfirm = {
+                showDuplicateDialog = false
+                onSaveVocab(duplicateVocab!!.copy(
+                    word = word.trim(),
+                    wordType = wordType,
+                    pronunciation = pronunciation,
+                    meaning = meaning,
+                    example = example,
+                    collocation = collocation,
+                    note = note
+                ))
             },
-            dismissButton = {
-                TextButton(onClick = { showDuplicateDialog = false }) {
-                    Text("Hủy")
-                }
-            }
+            onDismiss = { showDuplicateDialog = false }
         )
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        if (vocabularyId == null) stringResource(R.string.add_new_word) else stringResource(R.string.edit_vocabulary),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White
-                        )
+            MinLishTopAppBar(
+                title = if (editingVocab == null) "Thêm từ mới" else "Chỉnh sửa từ vựng",
+                onBack = handleBack,
+                actions = {
+                    if (editingVocab != null) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White)
+                        }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF5145B1))
+                }
             )
-        },
-        modifier = modifier
-    ) { paddingValues ->
-        if (isLoading && vocabularyId != null && currentVocabulary == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFF5145B1))
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .background(Color.White)
-                    .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                InputFieldLocal(
-                    label = buildAnnotatedString {
-                        append("Từ vựng ")
-                        withStyle(SpanStyle(color = Color.Red)) { append("*") }
-                    },
-                    value = word,
-                    onValueChange = { word = it },
-                    placeholder = "",
-                    singleLine = true
-                )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color.White)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Thông tin từ vựng", fontSize = 18.sp, fontWeight = FontWeight.Bold)
 
-                Column {
-                    Text(
-                        text = stringResource(R.string.word_type_label),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    var expanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded }
-                    ) {
-                        OutlinedTextField(
-                            value = wordType,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedBorderColor = Color.LightGray,
-                                focusedBorderColor = Color(0xFF5145B1)
+            MinLishTextField(
+                value = word,
+                onValueChange = { word = it; wordError = null },
+                label = "Từ vựng *",
+                error = wordError,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
+                    autoCorrectEnabled = false
+                )
+            )
+
+            MinLishDropdownField(
+                selectedValue = wordType,
+                onValueChange = { wordType = it },
+                label = "Loại từ",
+                options = wordTypes
+            )
+
+            MinLishTextField(
+                value = pronunciation,
+                onValueChange = { pronunciation = it },
+                label = "Phát âm",
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    autoCorrectEnabled = false
+                )
+            )
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = { onSpeak(word) }, enabled = word.isNotBlank()) {
+                    Icon(painterResource(R.drawable.ic_volume_up), contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Nghe thử")
+                }
+            }
+
+            MinLishTextField(
+                value = meaning,
+                onValueChange = { meaning = it; meaningError = null },
+                label = "Nghĩa *",
+                error = meaningError,
+                minLines = 2
+            )
+
+            MinLishTextField(
+                value = example,
+                onValueChange = { example = it },
+                label = "Ví dụ",
+                minLines = 2
+            )
+
+            MinLishTextField(
+                value = collocation,
+                onValueChange = { collocation = it },
+                label = "Collocation",
+                minLines = 2
+            )
+
+            MinLishTextField(
+                value = note,
+                onValueChange = { note = it },
+                label = "Ghi chú",
+                minLines = 2
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            MinLishPrimaryButton(
+                text = if (editingVocab == null) "Lưu từ vựng" else "Cập nhật",
+                isLoading = isLoading,
+                onClick = {
+                    val (valid, wErr, mErr) = validateVocab(word, meaning)
+                    wordError = wErr
+                    meaningError = mErr
+                    
+                    if (valid) {
+                        val existing = vocabList.find { 
+                            it.word.trim().equals(word.trim(), ignoreCase = true) && 
+                            it.id != (editingVocab?.id ?: "")
+                        }
+                        
+                        if (existing != null) {
+                            duplicateVocab = existing
+                            showDuplicateDialog = true
+                        } else {
+                            val vocab = editingVocab?.copy(
+                                word = word.trim(),
+                                wordType = wordType,
+                                pronunciation = pronunciation,
+                                meaning = meaning,
+                                example = example,
+                                collocation = collocation,
+                                note = note
+                            ) ?: Vocabulary(
+                                setId = setId,
+                                word = word.trim(),
+                                wordType = wordType,
+                                pronunciation = pronunciation,
+                                meaning = meaning,
+                                example = example,
+                                collocation = collocation,
+                                note = note,
+                                status = "Mới"
                             )
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            wordTypes.forEach { type ->
-                                DropdownMenuItem(
-                                    text = { Text(type) },
-                                    onClick = {
-                                        wordType = type
-                                        expanded = false
-                                    }
-                                )
-                            }
+                            onSaveVocab(vocab)
                         }
                     }
                 }
-
-                InputFieldLocal(
-                    label = buildAnnotatedString { append("Phát âm") },
-                    value = pronunciation,
-                    onValueChange = { pronunciation = it },
-                    placeholder = "",
-                    singleLine = true,
-                    trailingIcon = {
-                        IconButton(onClick = { viewModel.speak(word) }) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_volume_up),
-                                contentDescription = "Speak",
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                    }
-                )
-
-                InputFieldLocal(
-                    label = buildAnnotatedString {
-                        append("Nghĩa ")
-                        withStyle(SpanStyle(color = Color.Red)) { append("*") }
-                    },
-                    value = meaning,
-                    onValueChange = { meaning = it },
-                    placeholder = "",
-                    minLines = 3
-                )
-
-                InputFieldLocal(
-                    label = buildAnnotatedString { append("Ví dụ") },
-                    value = example,
-                    onValueChange = { example = it },
-                    placeholder = "",
-                    minLines = 2
-                )
-
-                InputFieldLocal(
-                    label = buildAnnotatedString { append("Collocation") },
-                    value = collocation,
-                    onValueChange = { collocation = it },
-                    placeholder = "",
-                    minLines = 2
-                )
-
-                InputFieldLocal(
-                    label = buildAnnotatedString { append("Ghi chú") },
-                    value = note,
-                    onValueChange = { note = it },
-                    placeholder = "",
-                    minLines = 2
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(
-                    onClick = {
-                        if (word.isNotBlank() && meaning.isNotBlank()) {
-                            // Check for duplicate word (case-insensitive)
-                            val existing = vocabList.find { 
-                                it.word.equals(word.trim(), ignoreCase = true) && it.id != vocabularyId 
-                            }
-                            
-                            if (existing != null) {
-                                duplicateVocab = existing
-                                showDuplicateDialog = true
-                            } else {
-                                val vocab = currentVocabulary?.copy(
-                                    word = word.trim(),
-                                    wordType = wordType,
-                                    pronunciation = pronunciation,
-                                    meaning = meaning,
-                                    example = example,
-                                    collocation = collocation,
-                                    note = note
-                                ) ?: Vocabulary(
-                                    setId = setId,
-                                    word = word.trim(),
-                                    wordType = wordType,
-                                    pronunciation = pronunciation,
-                                    meaning = meaning,
-                                    example = example,
-                                    collocation = collocation,
-                                    note = note,
-                                    status = "Mới"
-                                )
-                                
-                                if (vocabularyId == null) {
-                                    viewModel.addVocabulary(vocab) { success ->
-                                        if (success) navController.popBackStack()
-                                    }
-                                } else {
-                                    viewModel.updateVocabulary(vocab) { success ->
-                                        if (success) navController.popBackStack()
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp),
-                    shape = RoundedCornerShape(32.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5145B1))
-                ) {
-                    Text(
-                        if (vocabularyId == null) stringResource(R.string.save_vocabulary) else stringResource(R.string.save),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-            }
+            )
         }
     }
 }
 
-@Composable
-fun InputFieldLocal(
-    label: AnnotatedString,
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    trailingIcon: @Composable (() -> Unit)? = null,
-    minLines: Int = 1,
-    singleLine: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color.Gray,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(placeholder, color = Color.Gray) },
-            trailingIcon = trailingIcon,
-            shape = RoundedCornerShape(16.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = Color.LightGray,
-                focusedBorderColor = Color(0xFF5145B1),
-                unfocusedContainerColor = Color.White,
-                focusedContainerColor = Color.White
-            ),
-            minLines = minLines,
-            maxLines = if (singleLine) 1 else 5,
-            singleLine = singleLine,
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Sentences,
-                autoCorrectEnabled = true,
-                keyboardType = KeyboardType.Text,
-                imeAction = if (singleLine) ImeAction.Next else ImeAction.Default
-            )
-        )
-    }
+private fun validateVocab(word: String, meaning: String): Triple<Boolean, String?, String?> {
+    var wErr: String? = null
+    var mErr: String? = null
+    if (word.isBlank()) wErr = "Từ vựng không được để trống"
+    if (meaning.isBlank()) mErr = "Nghĩa không được để trống"
+    return Triple(wErr == null && mErr == null, wErr, mErr)
 }

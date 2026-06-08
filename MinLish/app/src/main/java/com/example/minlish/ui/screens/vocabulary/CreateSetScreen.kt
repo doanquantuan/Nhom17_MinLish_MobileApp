@@ -1,25 +1,22 @@
 package com.example.minlish.ui.screens.vocabulary
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.minlish.data.model.VocabularySet
+import com.example.minlish.ui.components.*
 import com.example.minlish.viewmodel.VocabularyViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateSetScreen(
     navController: NavController,
@@ -29,170 +26,173 @@ fun CreateSetScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val vocabularySets by viewModel.vocabularySets.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.loadVocabularySets()
+    }
+
     val editingSet = remember(setId, vocabularySets) {
         if (setId != null) vocabularySets.find { it.id == setId } else null
+    }
+
+    val categories = remember(vocabularySets) {
+        val defaultCategories = listOf("Chung", "IELTS", "TOEIC", "Giao tiếp", "Học thuật", "Cơ bản")
+        val userCategories = vocabularySets.map { it.category }
+        (defaultCategories + userCategories).distinct().filter { it.isNotBlank() }
     }
 
     CreateSetContent(
         isLoading = isLoading,
         editingSet = editingSet,
+        availableCategories = categories,
+        isDuplicateName = { titleToCheck -> 
+            vocabularySets.any { 
+                it.title.trim().equals(titleToCheck.trim(), ignoreCase = true) && 
+                it.id != (if (setId == "new") "" else (setId ?: ""))
+            }
+        },
         onBackClick = { navController.popBackStack() },
-        onCreateSet = { title, description, category ->
-            viewModel.createVocabularySet(title, description, category) { success ->
-                if (success) {
-                    navController.popBackStack()
+        onSaveSet = { title, description, category ->
+            if (editingSet != null) {
+                viewModel.updateVocabularySet(editingSet.copy(title = title, description = description, category = category)) { success ->
+                    if (success) navController.popBackStack()
+                }
+            } else {
+                viewModel.createVocabularySet(title, description, category) { success ->
+                    if (success) navController.popBackStack()
                 }
             }
         },
-        onUpdateSet = { updatedSet ->
-            viewModel.updateVocabularySet(updatedSet) { success ->
-                if (success) {
-                    navController.popBackStack()
-                }
+        onDeleteSet = { id ->
+            viewModel.deleteVocabularySet(id) { success ->
+                if (success) navController.popBackStack()
             }
         }
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateSetContent(
     isLoading: Boolean,
-    editingSet: com.example.minlish.data.model.VocabularySet? = null,
+    editingSet: VocabularySet?,
+    availableCategories: List<String>,
+    isDuplicateName: (String) -> Boolean,
     onBackClick: () -> Unit,
-    onCreateSet: (String, String, String) -> Unit,
-    onUpdateSet: (com.example.minlish.data.model.VocabularySet) -> Unit = {}
+    onSaveSet: (String, String, String) -> Unit,
+    onDeleteSet: (String) -> Unit
 ) {
-    val categories = listOf("General", "IELTS")
+    var title by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("") }
+    
+    var titleError by remember { mutableStateOf<String?>(null) }
+    var categoryError by remember { mutableStateOf<String?>(null) }
+    
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
 
-    var title by remember(editingSet) { mutableStateOf(editingSet?.title ?: "") }
-    var description by remember(editingSet) { mutableStateOf(editingSet?.description ?: "") }
-    var selectedCategory by remember(editingSet) { mutableStateOf(editingSet?.category ?: categories[0]) }
-    var expanded by remember { mutableStateOf(false) }
+    val initialValues = remember(editingSet) {
+        Triple(editingSet?.title ?: "", editingSet?.description ?: "", editingSet?.category ?: "")
+    }
 
-    val isEditMode = editingSet != null
+    LaunchedEffect(editingSet) {
+        editingSet?.let {
+            title = it.title
+            description = it.description
+            selectedCategory = it.category
+        }
+    }
+
+    val hasChanges = title != initialValues.first || 
+                     description != initialValues.second || 
+                     (selectedCategory != initialValues.third && selectedCategory.isNotBlank())
+
+    val handleBack = { if (hasChanges) showDiscardDialog = true else onBackClick() }
+    BackHandler(enabled = hasChanges, onBack = handleBack)
+
+    // --- Dialogs ---
+    if (showDiscardDialog) {
+        MinLishConfirmDialog(
+            title = "Hủy thay đổi?",
+            message = "Bạn có những thay đổi chưa được lưu. Bạn có chắc chắn muốn thoát không?",
+            confirmText = "Thoát",
+            onConfirm = onBackClick,
+            onDismiss = { showDiscardDialog = false }
+        )
+    }
+    if (showDeleteDialog && editingSet != null) {
+        MinLishConfirmDialog(
+            title = "Xóa bộ từ",
+            message = "Bạn có chắc chắn muốn xóa bộ từ '${editingSet.title}' không? Hành động này không thể hoàn tác.",
+            confirmText = "Xóa",
+            onConfirm = { onDeleteSet(editingSet.id) },
+            onDismiss = { showDeleteDialog = false }
+        )
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(if (isEditMode) "Chỉnh sửa bộ từ" else "Tạo bộ từ mới", color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF5145B1))
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = "Thông tin bộ từ",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Tên bộ từ") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    autoCorrectEnabled = true,
-                    keyboardType = KeyboardType.Text
-                )
-            )
-
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text("Mô tả (không bắt buộc)") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                minLines = 3,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    autoCorrectEnabled = true,
-                    keyboardType = KeyboardType.Text
-                )
-            )
-
-            Box(modifier = Modifier.fillMaxWidth()) {
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = selectedCategory,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Chủ đề") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color.LightGray,
-                            focusedBorderColor = Color(0xFF5145B1)
-                        )
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        categories.forEach { category ->
-                            DropdownMenuItem(
-                                text = { Text(category) },
-                                onClick = {
-                                    selectedCategory = category
-                                    expanded = false
-                                }
-                            )
+            MinLishTopAppBar(
+                title = if (editingSet != null) "Chỉnh sửa bộ từ" else "Tạo bộ từ mới",
+                onBack = handleBack,
+                actions = {
+                    if (editingSet != null) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White)
                         }
                     }
                 }
-            }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Thông tin bộ từ", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+
+            MinLishTextField(
+                value = title,
+                onValueChange = { title = it; titleError = null },
+                label = "Tên bộ từ",
+                error = titleError
+            )
+
+            MinLishTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = "Mô tả (không bắt buộc)",
+                minLines = 3
+            )
+
+            MinLishDropdownField(
+                selectedValue = selectedCategory,
+                onValueChange = { selectedCategory = it; categoryError = null },
+                label = "Chủ đề",
+                options = availableCategories,
+                error = categoryError
+            )
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Button(
+            MinLishPrimaryButton(
+                text = if (editingSet != null) "Cập nhật bộ từ" else "Tạo bộ từ",
+                isLoading = isLoading,
                 onClick = {
-                    if (title.isNotBlank()) {
-                        if (isEditMode && editingSet != null) {
-                            onUpdateSet(editingSet.copy(
-                                title = title,
-                                description = description,
-                                category = selectedCategory.ifBlank { "Chung" }
-                            ))
-                        } else {
-                            onCreateSet(title, description, selectedCategory.ifBlank { "Chung" })
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5145B1)),
-                enabled = title.isNotBlank() && !isLoading
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                } else {
-                    Text(if (isEditMode) "Cập nhật bộ từ" else "Tạo bộ từ", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    val (valid, tErr, cErr) = validateSet(title, selectedCategory, isDuplicateName)
+                    titleError = tErr
+                    categoryError = cErr
+                    if (valid) onSaveSet(title.trim(), description.trim(), selectedCategory.trim())
                 }
-            }
+            )
         }
     }
+}
+
+private fun validateSet(title: String, category: String, isDuplicate: (String) -> Boolean): Triple<Boolean, String?, String?> {
+    var tErr: String? = null
+    var cErr: String? = null
+    if (title.isBlank()) tErr = "Tên bộ từ không được để trống"
+    else if (isDuplicate(title)) tErr = "Tên bộ từ này đã tồn tại"
+    if (category.isBlank()) cErr = "Chủ đề không được để trống"
+    return Triple(tErr == null && cErr == null, tErr, cErr)
 }

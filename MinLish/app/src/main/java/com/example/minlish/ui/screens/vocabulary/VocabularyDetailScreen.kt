@@ -6,7 +6,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -15,40 +14,49 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.minlish.R
 import com.example.minlish.navigation.Routes
+import com.example.minlish.ui.components.*
 import com.example.minlish.viewmodel.VocabularyViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VocabularyDetailScreen(
     navController: NavController,
     vocabularyId: String,
-    modifier: Modifier = Modifier,
     viewModel: VocabularyViewModel = viewModel()
 ) {
     val vocab by viewModel.currentVocabulary.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(vocabularyId) {
         viewModel.loadVocabularyById(vocabularyId)
     }
 
+    if (showDeleteDialog && vocab != null) {
+        MinLishConfirmDialog(
+            title = "Xóa từ vựng",
+            message = "Bạn có chắc chắn muốn xóa từ '${vocab!!.word}' không?",
+            confirmText = "Xóa",
+            onConfirm = {
+                showDeleteDialog = false
+                viewModel.deleteVocabulary(vocab!!) { success ->
+                    if (success) navController.popBackStack()
+                }
+            },
+            onDismiss = { showDeleteDialog = false }
+        )
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.word_details), color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                    }
-                },
+            MinLishTopAppBar(
+                title = "Chi tiết từ vựng",
+                onBack = { navController.popBackStack() },
                 actions = {
                     if (vocab != null) {
                         IconButton(onClick = {
@@ -56,21 +64,13 @@ fun VocabularyDetailScreen(
                         }) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
                         }
-                        IconButton(onClick = {
-                            vocab?.let {
-                                viewModel.deleteVocabulary(it) { success ->
-                                    if (success) navController.popBackStack()
-                                }
-                            }
-                        }) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF5145B1))
+                }
             )
-        },
-        modifier = modifier
+        }
     ) { paddingValues ->
         if (isLoading || vocab == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -100,7 +100,7 @@ fun VocabularyDetailScreen(
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_volume_up),
+                            painter = painterResource(id = com.example.minlish.R.drawable.ic_volume_up),
                             contentDescription = "Speak",
                             modifier = Modifier.size(40.dp),
                             tint = Color.Black
@@ -108,11 +108,11 @@ fun VocabularyDetailScreen(
                     }
                 }
 
-                DetailItem(label = stringResource(R.string.pronunciation_label), value = vocab!!.pronunciation)
-                DetailItem(label = stringResource(R.string.meaning_label), value = vocab!!.meaning)
-                DetailItem(label = stringResource(R.string.example_label), value = vocab!!.example)
-                DetailItem(label = stringResource(R.string.collocation_label), value = vocab!!.collocation)
-                DetailItem(label = stringResource(R.string.note_label), value = vocab!!.note)
+                DetailItem(label = "Phát âm", value = vocab!!.pronunciation)
+                DetailItem(label = "Nghĩa", value = vocab!!.meaning)
+                DetailItem(label = "Ví dụ", value = vocab!!.example)
+                DetailItem(label = "Collocation", value = vocab!!.collocation)
+                DetailItem(label = "Ghi chú", value = vocab!!.note)
             }
         }
     }
