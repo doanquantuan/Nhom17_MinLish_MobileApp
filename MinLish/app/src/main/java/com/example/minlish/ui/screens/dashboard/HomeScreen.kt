@@ -93,12 +93,14 @@ fun NotificationBadge(unreadCount: Int, primaryColor: Color, onClick: () -> Unit
                         contentColor = Color.White,
                         modifier = Modifier
                             .offset(x = 4.dp, y = (-4).dp)
+                            .sizeIn(minWidth = 16.dp, minHeight = 16.dp)
                     ) {
                         Text(
                             text = if (unreadCount > 99) "99+" else unreadCount.toString(),
                             fontSize = 10.sp,
                             fontFamily = BeVietnamPro,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 3.dp)
                         )
                     }
                 }

@@ -65,6 +65,10 @@ class DashboardViewModel : ViewModel() {
     fun refreshData() {
         val userId = auth.currentUser?.uid ?: return
         android.util.Log.d("DashboardVM", "Refreshing dashboard for user: $userId")
+        
+        // Đảm bảo observer số thông báo đang chạy cho user này
+        observeUnreadCount()
+
         viewModelScope.launch {
             _isLoading.value = true
             try {
