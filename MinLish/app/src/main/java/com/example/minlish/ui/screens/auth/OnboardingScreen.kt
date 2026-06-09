@@ -24,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.minlish.R
 import com.example.minlish.viewmodel.AuthViewModel
+import com.example.minlish.navigation.Routes
 
 @Composable
 fun OnboardingScreen(navController: NavController, authViewModel: AuthViewModel = viewModel()) {
@@ -45,7 +46,7 @@ fun OnboardingScreen(navController: NavController, authViewModel: AuthViewModel 
     LaunchedEffect(authViewModel.navigateToDashboard) {
         if (authViewModel.navigateToDashboard) {
             authViewModel.navigateToDashboard = false
-            navController.navigate("dashboard/0") { popUpTo("onboarding") { inclusive = true } }
+            navController.navigate(Routes.Home.route) { popUpTo("onboarding") { inclusive = true } }
         }
     }
 

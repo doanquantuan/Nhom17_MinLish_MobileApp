@@ -13,6 +13,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.auth.FirebaseUser
+import android.util.Log
 
 class AuthViewModel : ViewModel() {
     private val authRepo = AuthRepository()
@@ -21,6 +23,10 @@ class AuthViewModel : ViewModel() {
     // Trạng thái chung
     var isLoading by mutableStateOf(false)
     var toastMessage by mutableStateOf<String?>(null)
+    
+    // Trạng thái session reactive
+    var currentUser by mutableStateOf<FirebaseUser?>(null)
+        private set
 
     // Trạng thái điều hướng luồng
     var navigateToDashboard by mutableStateOf(false)
@@ -38,7 +44,8 @@ class AuthViewModel : ViewModel() {
     var isEditingName by mutableStateOf(false)
 
     init {
-        val currentUser = authRepo.getCurrentUser()
+        currentUser = authRepo.getCurrentUser()
+        Log.d("AuthVM", "Init: currentUser=${currentUser?.email}")
         userEmail = currentUser?.email ?: ""
         userName = currentUser?.displayName ?: "Người dùng"
         loadUserProfile()
@@ -82,6 +89,8 @@ class AuthViewModel : ViewModel() {
         authRepo.login(email, pass,
             onSuccess = {
                 val user = authRepo.getCurrentUser()
+                currentUser = user
+                Log.d("AuthVM", "Login success: ${user?.email}, verified=${user?.isEmailVerified}")
                 if (user != null && user.isEmailVerified) {
                     toastMessage = "Đăng nhập thành công!"
                     checkUserOnboarding(user.uid)
@@ -91,6 +100,7 @@ class AuthViewModel : ViewModel() {
                 }
             },
             onError = {
+                Log.e("AuthVM", "Login error: $it")
                 isLoading = false
                 toastMessage = translateAuthError(it)
             }
@@ -103,6 +113,8 @@ class AuthViewModel : ViewModel() {
         authRepo.loginWithGoogle(idToken,
             onSuccess = {
                 val user = authRepo.getCurrentUser()
+                currentUser = user
+                Log.d("AuthVM", "Google login success: ${user?.email}")
                 if (user != null)
                 {
                     toastMessage = "Đăng nhập thành công!"
@@ -110,6 +122,7 @@ class AuthViewModel : ViewModel() {
                 }
             },
             onError = {
+                Log.e("AuthVM", "Google login error: $it")
                 isLoading = false
                 toastMessage = translateAuthError(it)
             }
@@ -219,7 +232,9 @@ class AuthViewModel : ViewModel() {
     }
 
     fun logout(onComplete: () -> Unit) {
+        Log.d("AuthVM", "Logging out user: ${currentUser?.email}")
         authRepo.logout()
+        currentUser = null
         onComplete()
     }
 
@@ -238,17 +253,22 @@ class AuthViewModel : ViewModel() {
     }
 
     fun dismissVerificationDialog() {
+        Log.d("AuthVM", "Dismissing verification dialog - logging out")
         showVerificationDialog = false
         authRepo.logout()
+        currentUser = null
     }
 
     // Kiểm tra phân luồng người dùng cũ / mới
     private fun checkUserOnboarding(userId: String) {
+        Log.d("AuthVM", "Checking onboarding for: $userId")
         userRepo.getUserProfile(userId) { document ->
             isLoading = false
             if (document.exists() && document.getBoolean("onboardingCompleted") == true) {
+                Log.d("AuthVM", "Onboarding completed -> Dashboard")
                 navigateToDashboard = true
             } else {
+                Log.d("AuthVM", "Onboarding NOT completed -> Onboarding screen")
                 navigateToOnboarding = true
             }
         }

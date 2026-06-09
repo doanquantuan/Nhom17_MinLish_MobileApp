@@ -30,15 +30,15 @@ import com.example.minlish.ui.screens.game.QuizScreen
 import com.example.minlish.ui.screens.game.MatchingScreen
 import com.example.minlish.ui.components.MinLishBottomNavigation
 import com.example.minlish.viewmodel.*
-import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-    val currentUser = FirebaseAuth.getInstance().currentUser
     
     // Shared ViewModels for state persistence and global logic
     val authViewModel: AuthViewModel = viewModel()
+    val currentUser = authViewModel.currentUser
+
     val vocabViewModel: VocabularyViewModel = viewModel()
     val learningViewModel: LearningViewModel = viewModel()
     val dashboardViewModel: DashboardViewModel = viewModel()

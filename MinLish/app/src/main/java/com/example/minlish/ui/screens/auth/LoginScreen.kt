@@ -29,6 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.minlish.R
 import com.example.minlish.viewmodel.AuthViewModel
+import com.example.minlish.navigation.Routes
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
@@ -67,7 +68,7 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
     LaunchedEffect(authViewModel.navigateToDashboard, authViewModel.navigateToOnboarding) {
         if (authViewModel.navigateToDashboard) {
             authViewModel.navigateToDashboard = false
-            navController.navigate("dashboard/0") { popUpTo("login") { inclusive = true } }
+            navController.navigate(Routes.Home.route) { popUpTo("login") { inclusive = true } }
         } else if (authViewModel.navigateToOnboarding) {
             authViewModel.navigateToOnboarding = false
             navController.navigate("onboarding") { popUpTo("login") { inclusive = true } }
