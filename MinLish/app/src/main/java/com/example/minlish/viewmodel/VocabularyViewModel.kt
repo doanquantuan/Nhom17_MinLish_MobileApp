@@ -133,6 +133,10 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    private fun normalizeCategory(category: String): String {
+        return category.trim().lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+    }
+
     fun createVocabularySet(title: String, description: String, category: String, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -143,7 +147,7 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
                     userId = userId,
                     title = title,
                     description = description,
-                    category = category,
+                    category = normalizeCategory(category),
                     createdAt = System.currentTimeMillis(),
                     updateAt = System.currentTimeMillis()
                 )
@@ -164,7 +168,10 @@ class VocabularyViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                repository.updateSet(set.copy(updateAt = System.currentTimeMillis()))
+                repository.updateSet(set.copy(
+                    category = normalizeCategory(set.category),
+                    updateAt = System.currentTimeMillis()
+                ))
                 loadVocabularySets()
                 onComplete(true)
             } catch (e: Exception) {

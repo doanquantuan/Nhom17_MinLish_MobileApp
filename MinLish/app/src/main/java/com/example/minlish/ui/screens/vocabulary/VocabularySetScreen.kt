@@ -72,12 +72,12 @@ fun VocabularySetScreenContent(
     var setToDelete by remember { mutableStateOf<VocabularySet?>(null) }
 
     val dynamicCategories = remember(vocabularySets) {
-        listOf("Tất cả") + vocabularySets.map { it.category }.distinct().sorted()
+        listOf("Tất cả") + vocabularySets.map { it.category.trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }.sortedBy { it.lowercase() }
     }
     var selectedCategory by remember { mutableStateOf("Tất cả") }
 
     val filteredSets = vocabularySets.filter {
-        (selectedCategory == "Tất cả" || it.category == selectedCategory) &&
+        (selectedCategory == "Tất cả" || it.category.equals(selectedCategory, ignoreCase = true)) &&
                 it.title.contains(searchQuery, ignoreCase = true)
     }
 

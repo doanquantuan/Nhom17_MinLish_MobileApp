@@ -36,7 +36,7 @@ fun MinLishTopAppBar(
 fun MinLishLargeHeader(
     title: String,
     onBack: (() -> Unit)? = null,
-    height: androidx.compose.ui.unit.Dp = 120.dp,
+    height: androidx.compose.ui.unit.Dp = 100.dp,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     Box(

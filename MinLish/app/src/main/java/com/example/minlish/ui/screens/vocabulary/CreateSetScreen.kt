@@ -36,8 +36,8 @@ fun CreateSetScreen(
 
     val categories = remember(vocabularySets) {
         val defaultCategories = listOf("Chung", "IELTS", "TOEIC", "Giao tiếp", "Học thuật", "Cơ bản")
-        val userCategories = vocabularySets.map { it.category }
-        (defaultCategories + userCategories).distinct().filter { it.isNotBlank() }
+        val userCategories = vocabularySets.map { it.category.trim() }
+        (defaultCategories + userCategories).distinctBy { it.lowercase() }.filter { it.isNotBlank() }
     }
 
     CreateSetContent(

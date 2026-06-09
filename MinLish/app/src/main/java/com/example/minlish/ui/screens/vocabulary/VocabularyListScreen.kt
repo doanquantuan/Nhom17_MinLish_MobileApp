@@ -65,6 +65,8 @@ fun VocabularyListScreen(
         uri?.let { viewModel.exportCsv(setId, it, context) { _, msg -> Toast.makeText(context, msg, Toast.LENGTH_LONG).show() } }
     }
 
+    var searchQuery by remember { mutableStateOf("") }
+
     LaunchedEffect(setId) {
         viewModel.loadVocabularies(setId)
     }
@@ -74,7 +76,7 @@ fun VocabularyListScreen(
             MinLishLargeHeader(
                 title = setTitle.ifEmpty { "Danh sách từ" },
                 onBack = { navController.popBackStack() },
-                height = 150.dp,
+                height = 100.dp,
                 actions = {
                     IconButton(onClick = { importLauncher.launch("text/*") }) {
                         Icon(Icons.Default.FileDownload, contentDescription = null, tint = Color.White)
@@ -103,7 +105,6 @@ fun VocabularyListScreen(
             }
 
             item {
-                var searchQuery by remember { mutableStateOf("") }
                 SearchAndAddRow(
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
@@ -119,7 +120,11 @@ fun VocabularyListScreen(
                     }
                 }
             } else {
-                items(vocabularies) { vocab ->
+                val filteredVocabs = vocabularies.filter {
+                    it.word.contains(searchQuery, ignoreCase = true) ||
+                    it.meaning.contains(searchQuery, ignoreCase = true)
+                }
+                items(filteredVocabs) { vocab ->
                     VocabularyItem(
                         vocab = vocab,
                         onPronounceClick = { viewModel.speak(vocab.word) },
