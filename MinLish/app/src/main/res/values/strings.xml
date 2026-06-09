@@ -1,3 +1,27 @@
 <resources>
     <string name="app_name">MinLish</string>
+    <string name="total_words">Tổng từ</string>
+    <string name="needs_review">Cần ôn</string>
+    <string name="learned">Đã thuộc</string>
+    <string name="search_word">Tìm từ&#8230;</string>
+    <string name="add">Thêm</string>
+    <string name="review_tag">Ôn lại</string>
+    <string name="learned_tag">Thuộc</string>
+    <string name="new_tag">Mới</string>
+    <string name="add_new_word">Thêm từ mới</string>
+    <string name="save">Lưu</string>
+    <string name="vocabulary_label">Từ vựng *</string>
+    <string name="pronunciation_label">Phát âm</string>
+    <string name="meaning_label">Nghĩa *</string>
+    <string name="example_label">Ví dụ</string>
+    <string name="description_label">Mô tả</string>
+    <string name="collocation_label">Collocation</string>
+    <string name="note_label">Ghi chú</string>
+    <string name="save_vocabulary">Lưu từ vựng</string>
+    <string name="word_type_label">Loại từ</string>
+    <string name="word_details">Chi tiết từ vựng</string>
+    <string name="edit_vocabulary">Chỉnh sửa từ vựng</string>
+    <string name="edit_set">Chỉnh sửa bộ từ</string>
+    <string name="delete">Xóa</string>
+    <string name="edit">Sửa</string>
 </resources>
